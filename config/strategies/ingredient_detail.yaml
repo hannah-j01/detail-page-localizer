@@ -1,0 +1,11 @@
+id: ingredient_detail
+name: 소재·성분 세부 정보 강조
+description: 핵심 성분, 함량, 무첨가 항목 등 세부 정보를 투명하게 제시한다.
+when: 성분명과 함량 등 구체적인 사양이 있을 때
+required_evidence: 전성분 또는 성분 함량 정보
+sections: [상세 설명, 제품 사양]
+risks:
+  - 성분 자체의 효과를 제품의 효능처럼 과장하지 않는다
+metrics: [상세페이지 체류 시간, 성분 관련 문의 수]
+reviewed_at: 2026-10-29
+references: [PRODUCT_BRIEF.md 기능 3]

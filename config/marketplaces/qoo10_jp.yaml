@@ -1,0 +1,21 @@
+id: qoo10_jp
+name: Qoo10 Japan
+country: jp
+buyer_context:
+  - text: 한국 화장품 카테고리 비중이 크고, 할인·세트 구성에 반응하는 고객이 많다는 가설
+    verified: false
+  - text: 모바일에서 세로로 긴 상세 이미지를 스크롤하며 보는 구매 흐름이 일반적이라는 가설
+    verified: false
+# 등록 형식 규칙. verified: false 인 항목은 화면에 '미확인'으로 표시하고 확정 규칙처럼 쓰지 않는다.
+format_rules:
+  - rule: 상품명 글자 수 제한
+    value: 확인 필요
+    verified: false
+    source: Qoo10 셀러 가이드에서 직접 확인 필요
+  - rule: 검색 키워드 입력 칸 개수
+    value: 확인 필요
+    verified: false
+    source: Qoo10 셀러 가이드에서 직접 확인 필요
+reviewed_at: 2026-10-29
+references:
+  - Qoo10 Japan 셀러 가이드(미확인)

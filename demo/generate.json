@@ -1,0 +1,263 @@
+{
+  "language": "ja",
+  "items": [
+    {
+      "id": "S1", "section": "상품명",
+      "original_ko": "결담 어성초 77 진정 토너 200ml",
+      "localized": "GYEOLDAM（ギョルダム） ドクダミ77 カーミングトナー 200ml 無香料 弱酸性 化粧水 韓国コスメ",
+      "back_translation_ko": "GYEOLDAM(결담) 어성초77 카밍 토너 200ml 무향료 약산성 화장수 한국 코스메",
+      "reason": "브랜드명은 영문과 카타카나를 함께 써 검색과 발음을 모두 지원했습니다. 일본에서 토너는 '化粧水'로 검색되는 경우가 많다는 가정에 따라 일반명과 핵심 사양(무향료, 약산성)을 상품명에 넣었습니다. 상품명 글자 수 제한은 확인되지 않았으므로(설정 미확인) 등록 전에 확인이 필요합니다.",
+      "fact_ids": ["F1", "F2", "F4", "F5"], "strategy_ids": ["ingredient_detail"],
+      "is_ai_suggestion": false,
+      "variants": ["ギョルダム ドクダミエキス77% 化粧水 200ml 無香料・無着色 弱酸性 拭き取り 韓国コスメ"]
+    },
+    {
+      "id": "S2", "section": "핵심 소구점",
+      "original_ko": "어성초 추출물 77% 함유, 판테놀 배합",
+      "localized": "ドクダミエキスを77%配合。パンテノールとヒアルロン酸Naを加えた、シンプルな処方の化粧水です。",
+      "back_translation_ko": "어성초 추출물을 77% 배합. 판테놀과 히알루론산나트륨을 더한 심플한 처방의 화장수입니다.",
+      "reason": "확인된 수치(77%)와 성분명을 첫 소구점으로 배치했습니다(성분 세부 정보 강조 전략).",
+      "fact_ids": ["F2", "F3"], "strategy_ids": ["ingredient_detail"],
+      "is_ai_suggestion": false,
+      "variants": ["ドクダミエキス77%＋パンテノール配合の、毎日使えるシンプル化粧水。"]
+    },
+    {
+      "id": "S3", "section": "핵심 소구점",
+      "original_ko": "약산성(pH 5.5), 무향료·무색소",
+      "localized": "無香料・無着色・弱酸性（pH5.5）。香りが苦手な方や、肌がゆらぎやすい時期にも使いやすい処方です。",
+      "back_translation_ko": "무향료·무색소·약산성(pH 5.5). 향을 싫어하는 분이나 피부가 예민해지기 쉬운 시기에도 쓰기 편한 처방입니다.",
+      "reason": "'누구나 안심' 같은 단정 대신 확인된 무첨가 항목과 pH 수치로 순한 인상을 전달했습니다.",
+      "fact_ids": ["F4", "F5"], "strategy_ids": ["ingredient_detail"],
+      "is_ai_suggestion": false,
+      "variants": ["香料・着色料不使用、pH5.5の弱酸性。毎日のケアに取り入れやすいシンプル処方。"]
+    },
+    {
+      "id": "S4", "section": "핵심 소구점",
+      "original_ko": "",
+      "localized": "韓国のお客様レビューより：「香りがなくて使いやすい」「水のように軽く、ベタつかない」\n※韓国での販売時のレビューを翻訳・要約したものです。",
+      "back_translation_ko": "한국 고객 후기에서: '향이 없어서 쓰기 편하다', '물처럼 가볍고 끈적이지 않다'\n※한국 판매 시 후기를 번역·요약한 것입니다.",
+      "reason": "후기에서 반복된 사용감을 새 소구점으로 추가했습니다(후기·신뢰 정보 강조 전략). 한국 후기라는 출처를 밝혀 일본 현지 후기로 오해되지 않게 했습니다.",
+      "fact_ids": ["F15", "F17"], "strategy_ids": ["review_trust"],
+      "is_ai_suggestion": false,
+      "variants": ["韓国のレビューで繰り返し挙がったのは「無香料」と「軽いつけ心地」でした。"]
+    },
+    {
+      "id": "S5", "section": "상품 요약",
+      "original_ko": "예민해진 피부를 위한 데일리 진정 토너!",
+      "localized": "ドクダミエキス77%に、パンテノールとヒアルロン酸Naを配合した弱酸性の化粧水。水のように軽いテクスチャーで、ベタつかずにしっとりなじみます。200mlの大容量なので、コットンでの拭き取りにもたっぷり使えます。",
+      "back_translation_ko": "어성초 추출물 77%에 판테놀과 히알루론산나트륨을 배합한 약산성 화장수. 물처럼 가벼운 텍스처로 끈적임 없이 촉촉하게 스며듭니다. 200ml 대용량이라 화장솜으로 닦아낼 때도 넉넉하게 쓸 수 있습니다.",
+      "reason": "'진정'이라는 효능 표현과 느낌표 대신 성분·사용감·용량 사실로 요약했습니다. 담백한 브랜드 말투에 맞췄습니다.",
+      "fact_ids": ["F1", "F2", "F3", "F4", "F6", "F18"], "strategy_ids": ["ingredient_detail", "usage_scene"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S6", "section": "상세 설명",
+      "original_ko": "어성초 추출물 77%가 붉고 열 오른 피부를 빠르게 진정시켜 트러블이 싹 사라지는 경험을 해보세요.",
+      "localized": "処方の77%をドクダミエキスが占める化粧水です。肌にうるおいを与え、キメを整える毎日のベーシックケアにお使いください。",
+      "back_translation_ko": "처방의 77%를 어성초 추출물이 차지하는 화장수입니다. 피부에 수분을 주고 피부결을 정돈하는 매일의 기본 케어에 사용하세요.",
+      "reason": "'빠르게 진정', '트러블이 싹 사라진다'는 치료·소멸을 암시하고 증빙도 없어(F12) 삭제했습니다. 대신 일본 화장품 광고에서 일반적으로 쓰이는 '肌にうるおいを与える', '肌のキメを整える' 범위의 표현을 사용했습니다(허용 범위는 전문가 확인 권장).",
+      "fact_ids": ["F2", "F6"], "strategy_ids": ["benefit"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S7", "section": "상세 설명",
+      "original_ko": "민감 피부 판매 1위 토너, 피부과 테스트 완료로 누구나 안심하고 쓸 수 있어요.",
+      "localized": "香料や着色料を加えていない、シンプルな処方です。",
+      "back_translation_ko": "향료나 색소를 넣지 않은 심플한 처방입니다.",
+      "reason": "'판매 1위'(F13)와 '피부과 테스트 완료'(F14)는 증빙이 없어 제외했습니다. '누구나 안심'은 모든 사람에게 안전하다는 단정이라 삭제하고, 확인된 무첨가 사실로 대체했습니다. 증빙이 확인되면 주석과 함께 다시 넣을 수 있습니다.",
+      "fact_ids": ["F5"], "strategy_ids": ["ingredient_detail"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S8", "section": "상세 설명",
+      "original_ko": "끈적임 없이 촉촉하게 스며들어",
+      "localized": "水のように軽いテクスチャーで、ベタつかずにしっとりなじみます。汗ばむ季節にも使いやすいつけ心地です。",
+      "back_translation_ko": "물처럼 가벼운 텍스처로 끈적임 없이 촉촉하게 스며듭니다. 땀이 나는 계절에도 쓰기 편한 사용감입니다.",
+      "reason": "사용감 설명에 '여름에도 쓰기 좋다'는 후기(F17)를 더해 구체적인 사용 장면을 보여 줬습니다.",
+      "fact_ids": ["F6", "F17"], "strategy_ids": ["review_trust", "usage_scene"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S9", "section": "사용법",
+      "original_ko": "화장솜에 듬뿍 덜어 닦아내도, 손으로 두드려 흡수시켜도 좋아요.",
+      "localized": "【拭き取りケア】洗顔後、コットンにたっぷり含ませ、肌のキメに沿ってやさしく拭き取ります。\n【ハンドケア】洗顔後、適量を手のひらに取り、顔全体にやさしくなじませます。",
+      "back_translation_ko": "[닦아내기 케어] 세안 후 화장솜에 듬뿍 적셔 피부결을 따라 부드럽게 닦아냅니다.\n[손 케어] 세안 후 적당량을 손바닥에 덜어 얼굴 전체에 부드럽게 흡수시킵니다.",
+      "reason": "두 가지 공식 사용법을 제목을 붙여 나눴습니다. 후기의 '화장솜 팩'(F19)은 공식 사용법인지 확인되지 않아 넣지 않았습니다(Q4).",
+      "fact_ids": ["F7"], "strategy_ids": ["usage_scene"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S10", "section": "제품 사양",
+      "original_ko": "용량 200ml / 주요 성분: 어성초 추출물 77%, 판테놀, 히알루론산나트륨 / pH 5.5 / 제조국: 대한민국",
+      "localized": "内容量：200ml\n主な成分：ドクダミエキス（77%）、パンテノール、ヒアルロン酸Na\npH：5.5（弱酸性）\n香料・着色料：不使用\n原産国：韓国\n使用期限：製造日から36ヶ月\n全成分：［要追記］",
+      "back_translation_ko": "내용량: 200ml\n주요 성분: 어성초 추출물(77%), 판테놀, 히알루론산나트륨\npH: 5.5(약산성)\n향료·색소: 무첨가\n원산국: 한국\n사용기한: 제조일로부터 36개월\n전성분: [추가 필요]",
+      "reason": "사양을 일본 상세페이지에서 흔한 '항목：값' 형식으로 정리했습니다. 사용기한은 텍스트 입력에는 없고 상세 이미지(I4)에서 확인한 정보입니다. 성분명의 일본어 표기가 전성분 표기 규칙에 맞는지는 확인이 필요하고(Q9), 전성분은 입력되지 않아 빈칸으로 남겼습니다(Q1).",
+      "fact_ids": ["F1", "F2", "F3", "F4", "F5", "F10", "F21"], "strategy_ids": ["ingredient_detail"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S11", "section": "FAQ",
+      "original_ko": "",
+      "localized": "Q. 香りはありますか？\nA. 香料は使用していません。",
+      "back_translation_ko": "Q. 향이 있나요?\nA. 향료를 사용하지 않았습니다.",
+      "reason": "후기에서 무향이 반복 언급되어, 향을 신경 쓰는 고객의 질문을 미리 답했습니다.",
+      "fact_ids": ["F5", "F15"], "strategy_ids": ["faq_concern"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S12", "section": "FAQ",
+      "original_ko": "",
+      "localized": "Q. どのように使えばいいですか？\nA. 洗顔後にお使いください。コットンで拭き取る方法と、手のひらでなじませる方法のどちらでもお使いいただけます。",
+      "back_translation_ko": "Q. 어떻게 사용하면 되나요?\nA. 세안 후에 사용하세요. 화장솜으로 닦아내는 방법과 손바닥으로 흡수시키는 방법 모두 가능합니다.",
+      "reason": "사용법 문의를 줄이기 위해 공식 사용법을 FAQ로도 안내했습니다.",
+      "fact_ids": ["F7"], "strategy_ids": ["faq_concern", "usage_scene"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S13", "section": "FAQ",
+      "original_ko": "",
+      "localized": "Q. 敏感肌でも使えますか？\nA. 無香料・無着色、弱酸性（pH5.5）の処方です。すべての方に肌トラブルが起きないわけではありませんので、お肌に合わないときは使用を中止してください。",
+      "back_translation_ko": "Q. 민감한 피부에도 쓸 수 있나요?\nA. 무향료·무색소, 약산성(pH 5.5) 처방입니다. 모든 분에게 피부 트러블이 생기지 않는 것은 아니므로, 피부에 맞지 않을 때는 사용을 중지하세요.",
+      "reason": "타깃 고객의 가장 큰 우려에 답하되, 안전을 보장하지 않고 확인된 처방 정보와 주의사항(F8)만으로 답했습니다.",
+      "fact_ids": ["F4", "F5", "F8"], "strategy_ids": ["faq_concern"],
+      "is_ai_suggestion": false, "variants": []
+    },
+    {
+      "id": "S17", "section": "검색 키워드",
+      "original_ko": "",
+      "localized": "ドクダミ 化粧水, ドクダミ トナー, 韓国コスメ 化粧水, 拭き取り化粧水, 無香料 化粧水, 弱酸性 化粧水, 大容量 化粧水, 敏感肌 化粧水",
+      "back_translation_ko": "어성초 화장수, 어성초 토너, 한국 코스메 화장수, 닦토 화장수, 무향료 화장수, 약산성 화장수, 대용량 화장수, 민감피부 화장수",
+      "reason": "확인된 성분·사양·사용법에서 키워드를 뽑았습니다. 실제 검색량 데이터 없이 만든 가설이므로 Qoo10 검색창 자동완성 등으로 확인이 필요합니다.",
+      "fact_ids": ["F1", "F2", "F4", "F5", "F7"], "strategy_ids": ["ingredient_detail"],
+      "is_ai_suggestion": true, "variants": []
+    },
+    {
+      "id": "S18", "section": "CTA",
+      "original_ko": "",
+      "localized": "毎日のベーシックケアに、たっぷり使える200mlを。",
+      "back_translation_ko": "매일의 기본 케어에, 넉넉하게 쓰는 200ml를.",
+      "reason": "할인·한정 같은 근거 없는 긴급성 대신 용량 가치를 담백하게 전달했습니다.",
+      "fact_ids": ["F1"], "strategy_ids": ["value"],
+      "is_ai_suggestion": true,
+      "variants": ["香りのないシンプルな化粧水を、毎日のスキンケアに。", "拭き取りにも使える大容量。まずは1本お試しください。"]
+    }
+  ],
+  "image_guides": [
+    {
+      "image_id": "I1", "action": "문구만 교체", "recommended_order": 1,
+      "text_replacements": [
+        {"original_ko": "예민한 피부를 위한", "localized": "ゆらぎがちな肌の、毎日に", "back_translation_ko": "흔들리기 쉬운 피부의 매일에"},
+        {"original_ko": "데일리 진정 토너", "localized": "ドクダミ77 化粧水", "back_translation_ko": "어성초77 화장수"},
+        {"original_ko": "결담 어성초 77 진정 토너 200ml", "localized": "GYEOLDAM（ギョルダム） ドクダミ77 トナー 200ml", "back_translation_ko": "GYEOLDAM(결담) 어성초77 토너 200ml"},
+        {"original_ko": "어성초 추출물", "localized": "ドクダミエキス", "back_translation_ko": "어성초 추출물"},
+        {"original_ko": "77%", "localized": "77%配合", "back_translation_ko": "77% 배합"}
+      ],
+      "edit_instructions": [
+        "헤드라인은 2줄 구성을 유지하고, 2번째 줄('ドクダミ77 化粧水')을 가장 크게 둡니다.",
+        "'진정(鎮静·カーミング)'은 이미지에서 빼서 효능 표방으로 읽힐 위험을 줄였습니다. 상품명 S1 과 표기를 맞출지는 S1 위험 표시 검토 후 결정하세요.",
+        "브랜드명 아래에 작은 글씨로 '韓国コスメ'를 넣는 것을 검토하세요."
+      ],
+      "keep_unchanged": ["제품 병의 형태·색상·캡", "병 라벨의 실제 인쇄 문구('GYEOLDAM', '어성초 77') — 실제 패키지이므로 번역·수정 금지", "77% 수치"],
+      "reason": "첫 화면에서 확인된 성분 수치와 제품명을 전달하고, 효능 표현인 '진정'은 빼서 성분 중심 포지셔닝(전략 1)에 맞췄습니다.",
+      "fact_ids": ["F1", "F2", "F11"]
+    },
+    {
+      "image_id": "I2", "action": "구성 수정", "recommended_order": 2,
+      "text_replacements": [
+        {"original_ko": "판테놀", "localized": "パンテノール", "back_translation_ko": "판테놀"},
+        {"original_ko": "히알루론산", "localized": "ヒアルロン酸Na", "back_translation_ko": "히알루론산나트륨"},
+        {"original_ko": "pH 5.5 약산성", "localized": "pH5.5 弱酸性", "back_translation_ko": "pH 5.5 약산성"},
+        {"original_ko": "무향료 · 무색소", "localized": "無香料・無着色", "back_translation_ko": "무향료·무색소"},
+        {"original_ko": "트러블 싹!", "localized": "", "back_translation_ko": "(삭제)"},
+        {"original_ko": "3일이면 진정 끝", "localized": "", "back_translation_ko": "(삭제)"},
+        {"original_ko": "민감피부 판매 1위", "localized": "", "back_translation_ko": "(삭제)"},
+        {"original_ko": "피부과 테스트 완료", "localized": "", "back_translation_ko": "(삭제)"}
+      ],
+      "edit_instructions": [
+        "하단 분홍 영역(효과 문구 2줄과 붉은 배지 2개)을 통째로 잘라냅니다. 성분 영역만 남깁니다.",
+        "성분 원 아래에 'シンプル処方' 같은 보조 문구 없이 여백을 두고 다음 이미지로 이어지게 합니다.",
+        "증빙(Q2, Q3, Q8)이 확인되면 배지는 출처 주석(※)과 함께 다시 넣을 수 있습니다.",
+        "'ヒアルロン酸Na' 표기는 Q9(정확한 성분명) 답변 후 확정하세요."
+      ],
+      "keep_unchanged": ["성분 원 3개의 배치와 색", "pH 5.5 수치"],
+      "reason": "성분 정보는 확인된 사실이라 살리고, '트러블 싹', '3일이면 진정 끝', '판매 1위', '피부과 테스트 완료'는 증빙이 없어(F12, F13, F14, F20) 직역하지 않고 삭제했습니다. 특히 '3일'은 어떤 입력 자료로도 확인되지 않는 수치입니다.",
+      "fact_ids": ["F3", "F4", "F5"]
+    },
+    {
+      "image_id": "I3", "action": "구성 수정", "recommended_order": 3,
+      "text_replacements": [
+        {"original_ko": "꿀피부 만들기 꿀팁!", "localized": "使い方", "back_translation_ko": "사용법"},
+        {"original_ko": "STEP 1 화장솜에 듬뿍 적셔요", "localized": "STEP 1　コットンにたっぷり含ませます", "back_translation_ko": "STEP 1 화장솜에 듬뿍 적십니다"},
+        {"original_ko": "STEP 2 피부결 따라 닦아내요", "localized": "STEP 2　肌のキメに沿ってやさしく拭き取ります", "back_translation_ko": "STEP 2 피부결을 따라 부드럽게 닦아냅니다"},
+        {"original_ko": "손으로 톡톡 두드려 흡수해도 OK", "localized": "手のひらでやさしくなじませてもOK", "back_translation_ko": "손바닥으로 부드럽게 흡수시켜도 OK"},
+        {"original_ko": "★★★★★ 실제 구매 후기", "localized": "韓国のお客様の声", "back_translation_ko": "한국 고객의 목소리"},
+        {"original_ko": "“향이 하나도 없어서 좋아요”", "localized": "「香りがなくて使いやすい」", "back_translation_ko": "'향이 없어서 쓰기 편하다'"},
+        {"original_ko": "“닦토로 아낌없이 써요”", "localized": "「拭き取り用にたっぷり使えます」", "back_translation_ko": "'닦아내기용으로 넉넉하게 쓸 수 있어요'"}
+      ],
+      "edit_instructions": [
+        "'꿀피부 만들기 꿀팁!'은 한국 유행어라 직역하지 않고 '使い方'(사용법)로 바꿉니다.",
+        "후기 제목 앞의 별 5개 장식은 삭제합니다(일본 쇼핑몰 평균 평점으로 오해될 수 있음).",
+        "후기 영역 아래에 '※韓国での販売時のレビューを翻訳・要約したものです' 주석을 작은 글씨로 추가합니다.",
+        "'톡톡 두드려'는 강한 パッティング으로 읽히지 않도록 'なじませる'로 옮겼습니다."
+      ],
+      "keep_unchanged": ["제품 병 이미지"],
+      "reason": "공식 사용법(F7)과 반복된 후기(F15, F18)는 살리고, 한국 유행어·줄임말('꿀피부', '꿀팁', '닦토')과 근거 없는 별점 장식은 현지 고객이 오해하지 않도록 바꿨습니다.",
+      "fact_ids": ["F7", "F15", "F18"]
+    },
+    {
+      "image_id": "NEW1", "action": "새로 추가", "recommended_order": 4,
+      "text_replacements": [
+        {"original_ko": "", "localized": "よくあるご質問", "back_translation_ko": "자주 묻는 질문"},
+        {"original_ko": "", "localized": "Q. 香りはありますか？　A. 香料は使用していません。", "back_translation_ko": "Q. 향이 있나요? A. 향료를 사용하지 않았습니다."},
+        {"original_ko": "", "localized": "Q. 敏感肌でも使えますか？　A. 無香料・無着色、pH5.5の弱酸性処方です。お肌に合わないときは使用を中止してください。", "back_translation_ko": "Q. 민감한 피부에도 쓸 수 있나요? A. 무향료·무색소, pH 5.5 약산성 처방입니다. 피부에 맞지 않을 때는 사용을 중지하세요."}
+      ],
+      "edit_instructions": [
+        "후기 이미지(I3)와 제품 정보(I4) 사이에 FAQ 카드 2개짜리 이미지를 새로 만듭니다.",
+        "질문은 굵게, 답은 보통 굵기로 하고 카드마다 충분한 여백을 둡니다.",
+        "제품 사진을 새로 합성하지 말고, 필요하면 I1 의 제품 사진을 그대로 재사용합니다."
+      ],
+      "keep_unchanged": ["제품 사진을 쓸 경우 I1 원본 그대로(재생성·합성 금지)"],
+      "reason": "구매 전 우려 해소 전략(전략 4)에 따라, 텍스트 FAQ(S11, S13)를 이미지로도 보여 줍니다. 모바일에서 이미지만 넘겨 보는 고객을 고려했습니다(미검증 가설).",
+      "fact_ids": ["F4", "F5", "F8"]
+    },
+    {
+      "image_id": "I4", "action": "구성 수정", "recommended_order": 5,
+      "text_replacements": [
+        {"original_ko": "“벌써 두 병째예요”", "localized": "「もう2本目です」", "back_translation_ko": "'벌써 두 병째예요'"},
+        {"original_ko": "제품 정보", "localized": "製品情報", "back_translation_ko": "제품 정보"},
+        {"original_ko": "제품명", "localized": "製品名", "back_translation_ko": "제품명"},
+        {"original_ko": "결담 어성초 77 진정 토너", "localized": "GYEOLDAM ドクダミ77 トナー", "back_translation_ko": "GYEOLDAM 어성초77 토너"},
+        {"original_ko": "용량", "localized": "内容量", "back_translation_ko": "내용량"},
+        {"original_ko": "제조국", "localized": "原産国", "back_translation_ko": "원산국"},
+        {"original_ko": "대한민국", "localized": "韓国", "back_translation_ko": "한국"},
+        {"original_ko": "사용기한", "localized": "使用期限", "back_translation_ko": "사용기한"},
+        {"original_ko": "제조일로부터 36개월", "localized": "製造日から36ヶ月", "back_translation_ko": "제조일로부터 36개월"},
+        {"original_ko": "주의사항", "localized": "ご注意", "back_translation_ko": "주의사항"},
+        {"original_ko": "이상이 있을 경우 사용 중지", "localized": "お肌に異常が生じた場合は使用を中止してください", "back_translation_ko": "피부에 이상이 생긴 경우 사용을 중지하세요"},
+        {"original_ko": "", "localized": "全成分：［要追記］", "back_translation_ko": "전성분: [추가 필요]"}
+      ],
+      "edit_instructions": [
+        "표 맨 아래에 '全成分' 행과 수입·판매 책임 업체 행을 추가합니다(Q1, Q5 답변 후 기입).",
+        "'200ml' 값은 그대로 둡니다.",
+        "주의사항 문장이 길어지므로 오른쪽 열을 2줄로 줄바꿈합니다."
+      ],
+      "keep_unchanged": ["용량 200ml, 사용기한 36개월 수치"],
+      "reason": "제품 정보 표는 확인된 사실이므로 그대로 옮기고, 일본 판매에 필요할 수 있는 항목(전성분, 책임 업체)의 빈칸을 표시했습니다.",
+      "fact_ids": ["F1", "F8", "F10", "F18", "F21"]
+    }
+  ],
+  "risk_flags": [
+    {"item_id": "S1", "expression": "カーミング", "risk": "영어 calming(진정)을 옮긴 표현이라 효능 표방으로 읽힐 수 있습니다.", "suggestion": "브랜드의 정식 제품명이 아니라면 상품명에서 빼는 대안(variants)을 검토하세요. 이미지 I1 에서는 이미 뺐습니다.", "severity": "중간"},
+    {"item_id": "S3", "expression": "肌がゆらぎやすい時期にも使いやすい", "risk": "모든 민감 피부에 문제가 없다는 뜻으로 읽힐 수 있습니다.", "suggestion": "'※すべての方に肌トラブルが起きないわけではありません' 주석을 함께 표기하세요.", "severity": "낮음"},
+    {"item_id": "S4", "expression": "韓国のお客様レビューより", "risk": "후기 작성자의 인용 동의와 쇼핑몰의 외부 후기 게재 정책이 확인되지 않았습니다.", "suggestion": "동의와 정책을 확인한 뒤 사용하세요. 이미지 I3 의 후기도 같습니다.", "severity": "중간"},
+    {"item_id": "S17", "expression": "敏感肌 化粧水", "risk": "민감 피부 전용 효능을 주장하는 키워드로 보일 수 있습니다.", "suggestion": "쇼핑몰 키워드 정책을 확인하세요.", "severity": "낮음"}
+  ],
+  "missing_info": [
+    "'트러블이 싹 사라진다'(F12): 증빙이 없고 화장품 효능 범위를 넘을 수 있어 텍스트와 이미지 I2 모두에서 사용하지 않았습니다.",
+    "'민감 피부 판매 1위'(F13): 근거 자료가 없어 사용하지 않았습니다(Q3).",
+    "'피부과 테스트 완료'(F14): 증빙 자료가 없어 사용하지 않았습니다(Q2).",
+    "'3일이면 진정 끝'(F20): 이미지에만 있는 기간 효과 주장으로 근거가 없어 삭제했습니다(Q8).",
+    "전성분 목록이 없어 제품 사양과 이미지 I4 에 [要追記]로 남겼습니다(Q1).",
+    "후기 4의 화장솜 팩은 공식 사용법인지 확인되지 않아 사용법에 넣지 않았습니다(Q4)."
+  ]
+}

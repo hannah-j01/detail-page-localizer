@@ -1,0 +1,15 @@
+id: us
+name: 미국
+language: en
+language_name: 영어
+hypotheses:
+  - text: 핵심 효익을 짧은 불릿으로 먼저 보여 주는 구성이 비교 쇼핑에 유리하다는 가설
+    verified: false
+  - text: 성분 투명성(전성분, free-from 표기)에 대한 관심이 높다는 가설
+    verified: false
+writing_style:
+  - 짧고 직접적인 문장
+  - 효익을 앞에, 근거를 뒤에 배치
+reviewed_at: 2026-10-29
+references:
+  - 내부 가설(외부 근거 미확보)

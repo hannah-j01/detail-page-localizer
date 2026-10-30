@@ -1,0 +1,12 @@
+id: review_trust
+name: 후기·신뢰 정보 강조
+description: 실제 후기에서 반복적으로 언급된 장점을 상세페이지 앞부분에 배치한다.
+when: 실제 고객 후기가 여러 건 있고 공통된 장점이 확인될 때
+required_evidence: 실제 고객 후기 원문
+sections: [핵심 소구점, 상품 요약, 이미지 문구]
+risks:
+  - 후기를 지어내거나 의미를 과장해 옮기지 않는다
+  - 개인의 효능 체감을 일반적인 효과처럼 표현하지 않는다
+metrics: [상세페이지 체류 시간, 구매 전환율, 후기 섹션 스크롤 도달률]
+reviewed_at: 2026-10-29
+references: [PRODUCT_BRIEF.md 기능 3]

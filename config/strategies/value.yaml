@@ -1,0 +1,11 @@
+id: value
+name: 가격 대비 가치 강조
+description: 용량·구성·사용 기간 등으로 가격 대비 가치를 구체적으로 보여 준다.
+when: 가격과 용량(또는 구성) 정보가 있을 때
+required_evidence: 가격, 용량, 구성
+sections: [상품 요약, 제품 사양, CTA]
+risks:
+  - 근거 없는 '최저가', '한정 수량' 표현을 쓰지 않는다
+metrics: [장바구니 담기율, 구매 전환율]
+reviewed_at: 2026-10-29
+references: [PRODUCT_BRIEF.md 기능 3]

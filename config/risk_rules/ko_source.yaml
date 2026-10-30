@@ -1,0 +1,31 @@
+id: ko_source
+name: 한국어 원본 문구 점검
+# target: original → 현지화 결과가 아니라 사용자가 입력한 한국어 원본 문구를 검사한다.
+# 원본에 있던 위험 표현이 번역되며 그대로 옮겨지지 않았는지 확인하는 용도.
+applies_to: {country: any, category: any}
+target: original
+verified: false
+reviewed_at: 2026-10-29
+references:
+  - 내부 정리(법률 검토 아님)
+rules:
+  - pattern: '1위|넘버원|No\.?\s?1|판매량\s?1'
+    reason: 원본에 순위 표현이 있다. 근거 자료가 입력되지 않았다면 현지화 문구에 옮기면 안 된다.
+    suggestion: '조사 기관·기간 자료를 확인한다'
+    severity: 높음
+  - pattern: '치료|완치|재생|싹\s?(사라|없어)|사라지|트러블\s?싹'
+    reason: 원본에 치료·소멸을 암시하는 표현이 있다.
+    suggestion: '현지화 문구에서는 사용감·보습 등 허용 범위 표현으로 바꾼다'
+    severity: 높음
+  - pattern: '\d+\s?(일|주|시간|분)\s?(이면|만에|만|후)'
+    reason: 원본에 기간 효과 주장(예 '3일이면')이 있다. 시험 자료 없이 옮기면 근거 없는 효능 주장이 된다.
+    suggestion: '시험 기관·대상·결과를 확인하고, 없으면 숫자를 포함해 삭제한다'
+    severity: 높음
+  - pattern: '피부과\s?(테스트|임상|전문의)|임상\s?(시험|테스트)|저자극\s?테스트'
+    reason: 테스트·임상 표현은 증빙 자료가 필요하다.
+    suggestion: '시험 기관, 대상, 결과 문서를 확인한다'
+    severity: 중간
+  - pattern: '최초|유일|완벽|100\s?%'
+    reason: 독점성·절대 표현은 근거가 필요하다.
+    suggestion: '근거를 확인하거나 구체적인 사실로 바꾼다'
+    severity: 중간

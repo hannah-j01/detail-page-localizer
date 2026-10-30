@@ -1,0 +1,36 @@
+# 숫자 검수에 쓰는 단위 목록.
+# 같은 뜻의 단위를 언어별로 묶어 두면 '36개월'과 '36ヶ月'을 같은 값으로 본다.
+# suffix: 숫자 뒤에 붙는 표기 / prefix: 숫자 앞에 붙는 표기. 새 언어를 추가할 때 여기만 고친다.
+# 영문 표기는 대소문자를 구분하지 않으며, 뒤에 영문자가 이어지면 단위로 보지 않는다(예: '5 lovely').
+units:
+  percent: {label: "%", suffix: ["%", "퍼센트", "パーセント", "percent"]}
+  ml:      {label: "ml", suffix: ["ml", "밀리리터", "ミリリットル"]}
+  l:       {label: "L", suffix: ["l", "리터", "リットル", "liter", "liters"]}
+  mg:      {label: "mg", suffix: ["mg", "밀리그램", "ミリグラム"]}
+  g:       {label: "g", suffix: ["g", "그램", "グラム"]}
+  kg:      {label: "kg", suffix: ["kg", "킬로그램", "キログラム"]}
+  month:   {label: "개월", suffix: ["개월", "달", "ヶ月", "ケ月", "か月", "カ月", "箇月", "months", "month"]}
+  year:    {label: "년", suffix: ["년", "年", "years", "year"]}
+  week:    {label: "주", suffix: ["주", "週間", "週", "weeks", "week"]}
+  day:     {label: "일", suffix: ["일", "日", "days", "day"]}
+  hour:    {label: "시간", suffix: ["시간", "時間", "hours", "hour"]}
+  times:   {label: "회", suffix: ["회", "번", "回", "times"]}
+  bottle:  {label: "병", suffix: ["병", "통", "本", "bottles", "bottle"]}
+  piece:   {label: "개", suffix: ["개", "個", "pcs", "pieces", "piece"]}
+  sheet:   {label: "장", suffix: ["장", "枚", "sheets", "sheet"]}
+  case:    {label: "건", suffix: ["건", "件"]}
+  kind:    {label: "가지", suffix: ["가지", "種類", "kinds"]}
+  rank:    {label: "위", suffix: ["위", "位"]}
+  krw:     {label: "원", suffix: ["원", "won", "krw"], prefix: ["₩"]}
+  jpy:     {label: "엔", suffix: ["엔", "円", "yen", "jpy"], prefix: ["¥"]}
+  usd:     {label: "달러", suffix: ["달러", "ドル", "usd"], prefix: ["$"]}
+  ph:      {label: "pH", prefix: ["ph"]}
+  step:    {label: "단계", suffix: ["단계", "段階"], prefix: ["step"]}
+
+# 한국어 숫자 단어 → 숫자 (뒤에 단위가 올 때만 바꾼다. 예: '두 병째' → '2병째', '세안'은 그대로)
+korean_number_words: {한: 1, 두: 2, 세: 3, 네: 4, 다섯: 5, 여섯: 6, 일곱: 7, 여덟: 8, 아홉: 9, 열: 10}
+
+# 사실 주장이 아니라서 검수하지 않는 숫자
+ignore:
+  units: [step]                       # 순서 번호(STEP 1, 1단계)
+  value_one_units: [bottle, piece, sheet, times, kind]   # '1本お試し', '1枚目'처럼 수량 1

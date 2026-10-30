@@ -1,0 +1,11 @@
+id: usage_scene
+name: 사용 상황·활용법 설명
+description: 언제, 어떻게 쓰는지 구체적인 사용 장면과 방법을 보여 준다.
+when: 사용법이나 여러 활용 방법이 입력 정보로 확인될 때
+required_evidence: 사용법 정보
+sections: [사용법, 이미지 문구, FAQ]
+risks:
+  - 제조사가 안내하지 않은 사용법을 새로 만들지 않는다
+metrics: [사용법 관련 문의 수, 재구매율]
+reviewed_at: 2026-10-29
+references: [PRODUCT_BRIEF.md 기능 3]

@@ -1,0 +1,18 @@
+id: amazon_us
+name: Amazon US
+country: us
+buyer_context:
+  - text: 상품명·불릿 포인트·후기 평점을 중심으로 비교 구매한다는 가설
+    verified: false
+format_rules:
+  - rule: 상품명 글자 수 제한
+    value: 확인 필요
+    verified: false
+    source: Amazon Seller Central 스타일 가이드에서 직접 확인 필요
+  - rule: 불릿 포인트 개수와 길이
+    value: 확인 필요
+    verified: false
+    source: Amazon Seller Central 스타일 가이드에서 직접 확인 필요
+reviewed_at: 2026-10-29
+references:
+  - Amazon Seller Central 가이드(미확인)

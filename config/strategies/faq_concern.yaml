@@ -1,0 +1,11 @@
+id: faq_concern
+name: 구매 전 우려 해소 FAQ
+description: 고객이 구매 전에 걱정할 만한 점을 FAQ로 먼저 답한다.
+when: 후기나 문의에서 반복되는 질문·우려가 보이거나, 카테고리 특성상 확인이 필요한 정보가 있을 때
+required_evidence: 후기, 제품 사양, 주의사항
+sections: [FAQ]
+risks:
+  - 확인되지 않은 내용으로 답하지 않는다. 모르면 '확인 필요'로 남긴다
+metrics: [문의 수 감소, 구매 전환율]
+reviewed_at: 2026-10-29
+references: [PRODUCT_BRIEF.md 기능 3]
