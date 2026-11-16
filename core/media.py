@@ -84,6 +84,11 @@ def _encode(img: Image.Image) -> bytes:
     return buffer.getvalue()
 
 
+def to_jpeg(data: bytes) -> bytes:
+    """업로드한 교체 이미지(PNG·WEBP 등)를 미리보기·내보내기용 JPEG 로 바꾼다."""
+    return _encode(open_image(data))
+
+
 def slice_image(img: Image.Image) -> list[Image.Image]:
     if img.width > MAX_WIDTH:
         img = img.resize((MAX_WIDTH, round(img.height * MAX_WIDTH / img.width)), Image.LANCZOS)

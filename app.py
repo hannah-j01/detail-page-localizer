@@ -13,8 +13,8 @@ from dotenv import load_dotenv
 from core import llm, media, pipeline, url_import
 from core.config_loader import load_all, marketplaces_for, risk_rules_for
 from core.edits import COL_BACK, COL_LOCALIZED, COL_ORIGINAL, apply_guide_edits, is_edited, table_rows, with_guides
-from core.export import INCLUDED, compute_metrics, final_texts, to_json, to_markdown
-from core.preview import render_preview
+from core.export import INCLUDED, compute_metrics, final_texts, to_json, to_markdown, to_zip
+from core.preview import final_images, render_preview
 from core.review import ORIGINAL_ITEM_ID, full_review
 from core.schemas import FIELD_LABELS, ProductInput
 
@@ -51,7 +51,7 @@ def reset_from(stage: str) -> None:
     """해당 단계와 그 뒤 단계의 결과를 지운다(입력을 바꾸면 이후 결과는 무효)."""
     for key in STAGES[STAGES.index(stage):]:
         ss.pop(key, None)
-    for key in [k for k in ss.keys() if k.startswith(("dec_", "txt_", "gdec_", "gedit_", "ginst_", "gkeep_"))]:
+    for key in [k for k in ss.keys() if k.startswith(("dec_", "txt_", "gdec_", "gedit_", "ginst_", "gkeep_", "gord_", "gimg_", "gjpeg_"))]:
         del ss[key]
 
 
@@ -119,6 +119,28 @@ def collect_guide_decisions(page) -> dict:
 
 def media_by_id() -> dict:
     return {m.id: m for m in ss.get("media", [])}
+
+
+def image_overrides(page) -> tuple[dict, dict, set]:
+    """미리보기·내보내기에 쓸 (이미지 ID → JPEG, 이미지 ID → 순서, 교체 이미지를 올린 ID)."""
+    images = {m.id: m.jpeg for m in ss.get("media", [])}
+    order, replaced = {}, set()
+    for g in page.image_guides:
+        if f"gord_{g.image_id}" in ss:
+            order[g.image_id] = int(ss[f"gord_{g.image_id}"])
+        uploaded = ss.get(f"gimg_{g.image_id}")
+        if uploaded is None:
+            continue
+        cached = ss.get(f"gjpeg_{g.image_id}")
+        if not cached or cached[0] != uploaded.file_id:
+            try:
+                cached = (uploaded.file_id, media.to_jpeg(uploaded.getvalue()))
+            except media.MediaError:
+                continue                     # 카드에서 오류를 보여 준다
+            ss[f"gjpeg_{g.image_id}"] = cached
+        images[g.image_id] = cached[1]
+        replaced.add(g.image_id)
+    return images, order, replaced
 
 
 def flag_line(f) -> str:
@@ -446,6 +468,7 @@ def guide_card(g, thumbs: dict, flags: list) -> None:
     """g 는 AI 원본 지시서. 표 편집기에는 원본을 넘기고, 변경분은 Streamlit 이 따로 기억한다."""
     ss.setdefault(f"ginst_{g.image_id}", "\n".join(g.edit_instructions))
     ss.setdefault(f"gkeep_{g.image_id}", "\n".join(g.keep_unchanged))
+    ss.setdefault(f"gord_{g.image_id}", 0 if g.action == "삭제" else g.recommended_order)
     with st.container(border=True):
         c1, c2 = st.columns([1, 3])
         if g.image_id in thumbs:
@@ -459,6 +482,18 @@ def guide_card(g, thumbs: dict, flags: list) -> None:
             c2.caption("✏️ 직접 수정됨 — 고친 행의 역번역은 결과 파일에 '역번역 없음'으로 표시됩니다.")
         c2.radio("결정", ["미검토", "수락", "거절"], key=f"gdec_{g.image_id}", horizontal=True,
                  label_visibility="collapsed")
+        o1, o2 = c2.columns([1, 2.2])
+        o1.number_input("순서", min_value=0, max_value=99, step=1, key=f"gord_{g.image_id}",
+                        help="미리보기와 내보내기에서 이미지가 놓이는 순서입니다. 0 이면 상세페이지에서 뺍니다.")
+        o2.file_uploader("완성된 교체 이미지 (선택)", type=["jpg", "jpeg", "png", "webp"], key=f"gimg_{g.image_id}",
+                         help="디자이너가 지시서대로 고친 이미지를 올리면 미리보기와 내보내기에 이 이미지가 들어갑니다.")
+        uploaded = ss.get(f"gimg_{g.image_id}")
+        if uploaded is not None:
+            try:
+                media.open_image(uploaded.getvalue())
+                c2.caption("🖼 교체 이미지가 미리보기와 내보내기에 들어갑니다. 원본 지시서는 참고용으로 남습니다.")
+            except media.MediaError as e:
+                c2.error(str(e))
         for f in flags:
             st.markdown(flag_line(f))
         with st.expander(f"지시서 편집 — 바꿀 문구 {len(g.text_replacements)}건 · 수정 지시 · 보존 요소"):
@@ -479,10 +514,12 @@ def guide_card(g, thumbs: dict, flags: list) -> None:
 def preview_panel(page, product, decisions: dict, guide_decisions: dict) -> None:
     st.caption(
         "현지 고객이 보게 될 모양입니다. 거절한 항목은 빠지고, 점선 테두리는 미검토, 초록 테두리는 직접 수정한 항목입니다. "
-        "이미지는 아직 원본이며, 그 아래 표가 이미지에서 바꿀 문구입니다."
+        "교체 이미지를 올리기 전까지 이미지는 원본이며, 그 아래 표가 이미지에서 바꿀 문구입니다. "
+        "이미지 순서는 지시서 카드의 '순서' 칸으로 바꿀 수 있습니다."
     )
-    st.html(render_preview(product, page, decisions, guide_decisions,
-                           {m.id: m.jpeg for m in ss.get("media", [])}, include_unreviewed=True))
+    images, order, replaced = image_overrides(page)
+    st.html(render_preview(product, page, decisions, guide_decisions, images,
+                           include_unreviewed=True, image_order=order, replaced=replaced))
 
 
 def step_review() -> None:
@@ -588,13 +625,23 @@ def step_export() -> None:
     labels = {m.id: m.label for m in ss.get("media", [])}
     js = to_json(product, ex, sr, ss.get("chosen_ids", []), page, decisions, guide_decisions, flags, metrics, labels)
     stem = re.sub(r'[\\/:*?"<>|\s]+', "_", product.name)
-    c1, c2 = st.columns(2)
-    c1.download_button("Markdown 파일 다운로드", md, f"{stem}_{page.language}.md", "text/markdown", type="primary")
-    c2.download_button("JSON 파일 다운로드", js, f"{stem}_{page.language}.json", "application/json")
-    st.caption("업로드한 이미지 파일 자체는 저장하지 않습니다.")
+    images, order, replaced = image_overrides(page)
+    html_doc = render_preview(product, page, decisions, guide_decisions, images,
+                              include_unreviewed=False, full_document=True, image_order=order, replaced=replaced)
+    image_files = final_images(page, guide_decisions, images, image_order=order)
+    package = to_zip({"index.html": html_doc, f"{stem}_{page.language}.md": md, f"{stem}_{page.language}.json": js,
+                      **{f"images/{name}": data for name, data in image_files}})
+    c1, c2, c3, c4 = st.columns(4)
+    c1.download_button("상세페이지 HTML", html_doc, f"{stem}_{page.language}.html", "text/html", type="primary",
+                       help="이미지가 들어 있는 파일 하나입니다. 브라우저에서 바로 열립니다.")
+    c2.download_button(f"전체 묶음 ZIP (이미지 {len(image_files)}장)", package, f"{stem}_{page.language}.zip", "application/zip",
+                       help="HTML, Markdown, JSON 과 순서대로 번호를 붙인 이미지 파일")
+    c3.download_button("Markdown", md, f"{stem}_{page.language}.md", "text/markdown")
+    c4.download_button("JSON", js, f"{stem}_{page.language}.json", "application/json")
+    st.caption("이미지는 내려받는 파일에만 들어가며 서버에 저장하지 않습니다. 교체 이미지를 올리지 않은 '새로 추가' 이미지는 묶음에서 빠집니다.")
     with st.expander("최종 미리보기 (수락·직접 수정한 항목만)", expanded=True):
-        st.html(render_preview(product, page, decisions, guide_decisions,
-                               {m.id: m.jpeg for m in ss.get("media", [])}, include_unreviewed=False))
+        st.html(render_preview(product, page, decisions, guide_decisions, images,
+                               include_unreviewed=False, image_order=order, replaced=replaced))
     with st.expander("Markdown 원문 (오른쪽 위 복사 버튼으로 전체 복사)"):
         st.code(md, language="markdown")
 

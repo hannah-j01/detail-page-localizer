@@ -69,3 +69,44 @@ def test_full_document_wraps_fragment():
     product, page = demo()
     doc = render_preview(product, page, decisions_for(page), {}, include_unreviewed=False, full_document=True)
     assert doc.startswith("<!doctype html>") and 'lang="ja"' in doc and product.name in doc
+
+
+def test_image_order_override_and_zero_excludes():
+    product, page = demo()
+    media = {m.id: m.jpeg for m in pipeline.load_demo_media()}
+    gd = {g.image_id: "수락" for g in page.image_guides}
+    html = render_preview(product, page, decisions_for(page), gd, media, include_unreviewed=False,
+                          image_order={"I1": 9, "I3": 0})
+    assert 'alt="I3"' not in html                                         # 순서 0 은 뺀다
+    assert html.index('alt="I2"') < html.index('alt="I4"') < html.index('alt="I1"')   # I1 을 맨 뒤로
+
+
+def test_replaced_image_shows_done_badge_without_replacement_table():
+    product, page = demo()
+    media = {m.id: m.jpeg for m in pipeline.load_demo_media()}
+    gd = {g.image_id: "수락" for g in page.image_guides}
+    html = render_preview(product, page, decisions_for(page), gd, media, include_unreviewed=False, replaced={"I1"})
+    start, end = html.index('alt="I1"'), html.index('alt="I2"')
+    block = html[start:end]
+    assert "교체 이미지" in block and '<table class="rep">' not in block
+    assert '<table class="rep">' in html[end:]                             # 다른 이미지에는 표가 남는다
+
+
+def test_final_images_are_numbered_in_order_and_skip_missing_files():
+    from core.preview import final_images
+    _, page = demo()
+    media = {m.id: m.jpeg for m in pipeline.load_demo_media()}
+    gd = {g.image_id: "수락" for g in page.image_guides}
+    files = final_images(page, gd, media, image_order={"I4": 1, "I1": 2, "I2": 3, "I3": 0, "NEW1": 4})
+    assert [name for name, _ in files] == ["01_I4.jpg", "02_I1.jpg", "03_I2.jpg"]   # NEW1 은 파일이 없어 빠진다
+    assert files[0][1] == media["I4"]
+
+
+def test_zip_contains_all_files():
+    import io
+    import zipfile
+    from core.export import to_zip
+    data = to_zip({"index.html": "<p>한글</p>", "images/01_I1.jpg": b"\xff\xd8\xff"})
+    with zipfile.ZipFile(io.BytesIO(data)) as zf:
+        assert sorted(zf.namelist()) == ["images/01_I1.jpg", "index.html"]
+        assert zf.read("index.html").decode("utf-8") == "<p>한글</p>"

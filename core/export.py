@@ -5,7 +5,9 @@ guide_decisions 는 {이미지 ID: "수락"|"편집"|"거절"|"미검토"} 형�
 이미지 지시서를 직접 고친 경우 page 에는 고친 지시서가 들어 있어야 한다(core/edits.py).
 '수락'과 '편집' 항목만 최종 결과에 들어간다.
 """
+import io
 import json
+import zipfile
 from collections import Counter
 
 from core.review import ORIGINAL_ITEM_ID
@@ -124,3 +126,12 @@ def to_json(
         "metrics": metrics,
     }
     return json.dumps(data, ensure_ascii=False, indent=2)
+
+
+def to_zip(files: dict[str, bytes | str]) -> bytes:
+    """{경로: 내용} 을 ZIP 바이트로 묶는다. 문자열은 UTF-8 로 저장한다."""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+        for name, content in files.items():
+            zf.writestr(name, content.encode("utf-8") if isinstance(content, str) else content)
+    return buffer.getvalue()

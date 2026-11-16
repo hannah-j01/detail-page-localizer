@@ -5,6 +5,8 @@
 - guide_decisions 는 {이미지 ID: "수락"|"편집"|"거절"|"미검토"}
 - images 는 {이미지 ID: JPEG bytes}. 없는 이미지는 자리 표시 상자로 그린다.
 - include_unreviewed=True 면 거절만 빼고 모두 보여 준다(검수 중). False 면 수락·편집만 넣는다(내보내기).
+- image_order 는 {이미지 ID: 순서}. 화면에서 바꾼 순서이며 0 은 상세페이지에서 뺀다는 뜻. 없으면 AI 추천 순서.
+- replaced 는 디자이너가 완성한 교체 이미지를 올린 ID 집합. 이 이미지에는 '바꿀 문구' 표를 붙이지 않는다.
 """
 import base64
 import html
@@ -54,6 +56,7 @@ CSS = """
 .dp figure .new{padding:36px 18px;border:2px dashed #9ca3af;border-radius:6px;text-align:center;color:#6b7280;background:#fafafa}
 .dp figcaption{margin-top:6px;font-size:12.5px;color:#4b5563}
 .dp figcaption .act{display:inline-block;padding:1px 8px;border-radius:4px;background:#fff3cd;color:#7a5a00;font-weight:600;margin-right:6px}
+.dp figcaption .act.done{background:#dcfce7;color:#166534}
 .dp table.rep{width:100%;border-collapse:collapse;margin-top:6px;font-size:12.5px}
 .dp table.rep td{padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top}
 .dp table.rep td.ko{color:#9ca3af;text-decoration:line-through;width:45%}
@@ -124,7 +127,32 @@ def _tags(text: str) -> str:
     return '<div class="tags">' + "".join(f"<span>{_esc(w)}</span>" for w in words) + "</div>" if words else ""
 
 
-def _image_block(g: ImageGuide, jpeg: bytes | None, status: str, include_unreviewed: bool) -> str:
+def final_guides(
+    page: GeneratedPage, guide_decisions: dict, include_unreviewed: bool, image_order: dict[str, int] | None = None,
+) -> list[ImageGuide]:
+    """상세페이지에 실제로 들어갈 이미지 지시서를 순서대로. 삭제 권장·순서 0·거절(또는 미검토) 은 뺀다."""
+    image_order = image_order or {}
+    chosen = []
+    for g in page.image_guides:
+        order = image_order.get(g.image_id, g.recommended_order)
+        if g.image_id not in image_order and g.action == "삭제":
+            continue
+        if order <= 0 or not _visible(guide_decisions.get(g.image_id, "미검토"), include_unreviewed):
+            continue
+        chosen.append((order, g))
+    return [g for _, g in sorted(chosen, key=lambda x: x[0])]
+
+
+def final_images(
+    page: GeneratedPage, guide_decisions: dict, images: dict[str, bytes], *,
+    include_unreviewed: bool = False, image_order: dict[str, int] | None = None,
+) -> list[tuple[str, bytes]]:
+    """내보낼 이미지 파일 목록 [(파일 이름, JPEG)] — 순서가 파일 이름 앞에 붙는다. 아직 파일이 없는 새 이미지는 뺀다."""
+    guides = [g for g in final_guides(page, guide_decisions, include_unreviewed, image_order) if g.image_id in images]
+    return [(f"{n:02d}_{g.image_id}.jpg", images[g.image_id]) for n, g in enumerate(guides, 1)]
+
+
+def _image_block(g: ImageGuide, jpeg: bytes | None, status: str, include_unreviewed: bool, replaced: bool = False) -> str:
     if jpeg:
         src = "data:image/jpeg;base64," + base64.b64encode(jpeg).decode("ascii")
         body = f'<img src="{src}" alt="{_esc(g.image_id)}">'
@@ -137,7 +165,10 @@ def _image_block(g: ImageGuide, jpeg: bytes | None, status: str, include_unrevie
         f'<td>{_esc(r.localized) or "<em>(삭제)</em>"}</td></tr>' for r in reps
     )
     table = f'<table class="rep">{rows}</table>' if rows else ""
-    caption = f'<figcaption><span class="act">{_esc(g.action)}</span>{_esc(g.reason)}{table}</figcaption>'
+    if replaced:
+        caption = f'<figcaption><span class="act done">교체 이미지</span>{_esc(g.image_id)} 자리에 올린 완성 이미지입니다.</figcaption>'
+    else:
+        caption = f'<figcaption><span class="act">{_esc(g.action)}</span>{_esc(g.reason)}{table}</figcaption>'
     return _wrap(status, f"<figure>{body}{caption}</figure>", include_unreviewed)
 
 
@@ -148,9 +179,10 @@ def _visible(status: str, include_unreviewed: bool) -> bool:
 def render_preview(
     product: ProductInput, page: GeneratedPage, decisions: dict, guide_decisions: dict,
     images: dict[str, bytes] | None = None, *, include_unreviewed: bool = True, full_document: bool = False,
+    image_order: dict[str, int] | None = None, replaced: set[str] | None = None,
 ) -> str:
     """현재 검수 상태를 반영한 상세페이지 HTML 조각(또는 full_document=True 면 완전한 HTML 문서)."""
-    images = images or {}
+    images, replaced = images or {}, replaced or set()
     lang = page.language or ""
     by_section: dict[str, list[tuple[str, str]]] = {}
     for item in page.items:
@@ -159,9 +191,7 @@ def render_preview(
         if _visible(status, include_unreviewed) and text.strip():
             by_section.setdefault(item.section, []).append((status, text))
 
-    guides = [g for g in page.image_guides
-              if g.action != "삭제" and _visible(guide_decisions.get(g.image_id, "미검토"), include_unreviewed)]
-    guides.sort(key=lambda g: (g.recommended_order == 0, g.recommended_order))
+    guides = final_guides(page, guide_decisions, include_unreviewed, image_order)
 
     out = [f'<div class="dp" lang="{_esc(lang)}">']
     for section in SECTION_ORDER:
@@ -169,8 +199,8 @@ def render_preview(
         if section == "이미지":
             if guides:
                 out.append(f"<h2>{_esc(_heading(lang, section))}</h2>")
-                out += [_image_block(g, images.get(g.image_id), guide_decisions.get(g.image_id, "미검토"), include_unreviewed)
-                        for g in guides]
+                out += [_image_block(g, images.get(g.image_id), guide_decisions.get(g.image_id, "미검토"),
+                                     include_unreviewed, g.image_id in replaced) for g in guides]
             continue
         if not entries:
             continue

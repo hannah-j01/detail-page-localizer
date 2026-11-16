@@ -50,7 +50,16 @@ def test_editing_text_updates_preview_and_marks_edited(reviewed: AppTest):
 def test_accept_all_enables_export_with_final_preview(reviewed: AppTest):
     at = click(reviewed, "검토하지 않은 항목 모두 수락")
     assert not at.exception
-    assert any(b.label == "Markdown 파일 다운로드" for b in at.get("download_button")) or \
-        any("Markdown" in e.value for e in at.markdown)  # download_button 미지원 버전 대비
+    labels = [b.label for b in at.get("download_button")]
+    assert "상세페이지 HTML" in labels and any(label.startswith("전체 묶음 ZIP") for label in labels)
     htmls = [e.value for e in at.get("html")]
     assert len(htmls) >= 2 and 'class="badge"' not in htmls[-1]      # 최종 미리보기에는 검수 표시가 없다
+
+
+def test_image_order_controls_update_preview(reviewed: AppTest):
+    at = reviewed
+    at.number_input(key="gord_I1").set_value(0).run()
+    assert not at.exception and 'alt="I1"' not in at.get("html")[0].value
+    at.number_input(key="gord_I1").set_value(9).run()
+    html = at.get("html")[0].value
+    assert html.index('alt="I4"') < html.index('alt="I1"')
