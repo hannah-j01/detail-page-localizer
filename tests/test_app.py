@@ -25,7 +25,7 @@ def show_all(at: AppTest) -> AppTest:
 def reviewed() -> AppTest:
     at = AppTest.from_file(str(APP), default_timeout=120).run()
     assert not at.exception
-    at = click(at, "상품 정보 분석하기")
+    at = click(at, "단계별로 진행 (분석부터)")
     assert not at.exception and "extraction" in at.session_state
     at = click(at, "마케팅 전략 추천 받기")
     assert not at.exception and "strategy" in at.session_state
@@ -87,3 +87,18 @@ def test_auto_image_replacement_feeds_preview(reviewed: AppTest):
     assert 'alt="I1"' in html
     at.checkbox(key="guse_I1").set_value(False).run()           # 끄면 원본으로 돌아간다
     assert not at.exception
+
+
+def test_one_click_runs_to_review_with_everything_folded():
+    at = AppTest.from_file(str(APP), default_timeout=180).run()
+    at = click(at, "한 번에 끝내기 (분석 → 전략 → 생성 → 검수)")
+    assert not at.exception
+    assert {"extraction", "strategy", "page", "auto_images", "auto_accepted"} <= set(at.session_state)
+    assert at.session_state["one_click"] is True
+    assert at.session_state["chosen_ids"] == [s.strategy_id for s in at.session_state["strategy"].strategies]
+    titles = [e.label for e in at.expander]
+    assert any(t.startswith("② 추출 결과 확인 — 자동 진행됨") for t in titles)
+    assert any(t.startswith("③ 마케팅 전략 선택 — 추천 전략 모두 채택됨") for t in titles)
+    assert any("사람이 볼 항목은 4개" in s.value for s in at.success)
+    shown = {t.key[4:] for t in at.text_area if t.key and t.key.startswith("txt_")}
+    assert shown == {"S1", "S3", "S4", "S17"}

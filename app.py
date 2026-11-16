@@ -24,7 +24,7 @@ st.set_page_config(page_title="상세페이지 현지화 도우미", page_icon="
 CFG = load_all()
 STEPS = ["① 상품 정보 입력", "② 추출 결과 확인", "③ 마케팅 전략 선택", "④ 생성 결과 검수", "⑤ 내보내기"]
 STAGES = ["extraction", "strategy", "page"]           # 단계별 결과가 저장되는 session_state 키
-INPUT_KEYS = ["product", "media", "url_page", "url_images", "url_skipped", "up_images", "up_pdf", "url_input"]
+INPUT_KEYS = ["product", "media", "url_page", "url_images", "url_skipped", "up_images", "up_pdf", "url_input", "one_click"]
 SEVERITY_ICON = {"높음": "🔴", "중간": "🟠", "낮음": "🟡"}
 REQUIRED = ["name", "features", "description_ko", "target_customer", "goal"]
 OPTIONAL = ["price", "specs", "reviews", "certifications", "brand_tone", "competitors", "sales_data", "page_text"]
@@ -79,6 +79,57 @@ def run_ai(label: str, fn, *args, mode: str):
         ss.live_calls = ss.get("live_calls", 0) + len(usages)
         ss.setdefault("usages", []).extend(usages)
     return result
+
+
+# ── 단계 실행(버튼과 원클릭이 함께 쓴다) ─────────────────────
+def do_strategy(mode: str) -> bool:
+    reset_from("strategy")
+    result = run_ai("전략을 추천하는 중입니다…", pipeline.recommend, ss.product, ss.extraction, mode=mode)
+    if result:
+        ss.strategy = result
+    return bool(result)
+
+
+def do_generate(chosen: list, mode: str) -> bool:
+    reset_from("page")
+    ss.chosen_ids = [s.strategy_id for s in chosen]
+    result = run_ai("상세페이지를 만들고 → 현지 카피라이터 시각으로 다듬고 → 검수에 걸린 문구를 AI 가 스스로 고치는 중입니다… (3~6분 걸릴 수 있습니다)",
+                    refine.generate_with_review, ss.product, ss.extraction, chosen, mode=mode)
+    if result:
+        ss.page = result.page
+        ss.refine_log = result
+    return bool(result)
+
+
+def do_auto_images(mode: str) -> bool:
+    """이미지 속 한국어 문구 자동 교체. 대상 이미지가 없으면 조용히 건너뛴다."""
+    page = ss.page
+    guides = overlay.eligible(current_page(page).image_guides, set(media_by_id()))
+    if not guides:
+        return True
+    targets = {g.image_id: [r.original_ko for r in g.text_replacements if r.original_ko] for g in guides}
+    located = run_ai("이미지에서 글자 위치를 찾고 현지어로 다시 그리는 중입니다…", pipeline.locate, ss.media, targets, mode=mode)
+    if not located:
+        return False
+    try:
+        ss.auto_images = overlay.overlay_all(ss.media, guides, located.boxes, page.language)
+        ss.locate_notes = located.notes
+    except fonts.FontError as e:
+        st.error(str(e))
+        return False
+    return True
+
+
+def run_one_click(mode: str) -> None:
+    """원클릭: 추출이 끝난 상태에서 전략 전부 채택 → 생성·다듬기·자기검수 → 이미지 문구 자동 교체까지 멈추지 않고 진행한다.
+
+    중간에 실패하면(호출 한도, 네트워크) 거기까지의 결과만 남고, 사용자는 해당 단계 버튼으로 이어서 할 수 있다.
+    """
+    if not do_strategy(mode):
+        return
+    if not do_generate(ss.strategy.strategies, mode):
+        return
+    do_auto_images(mode)
 
 
 def collect_decisions(page) -> dict:
@@ -317,9 +368,14 @@ def step_input(mode: str) -> None:
             for field in OPTIONAL:
                 widget = st.text_area if field in LONG_FIELDS else st.text_input
                 values[field] = widget(FIELD_LABELS[field], getattr(base, field), disabled=demo)
-        submitted = st.form_submit_button("상품 정보 분석하기", type="primary")
+        b1, b2 = st.columns([1, 1])
+        one_click = b1.form_submit_button("한 번에 끝내기 (분석 → 전략 → 생성 → 검수)", type="primary",
+                                          help="추천 전략을 모두 채택하고, 생성·현지어 다듬기·자기검수·이미지 문구 자동 교체까지 멈추지 않고 진행합니다. "
+                                               "끝나면 검수가 필요한 항목만 보여 줍니다.")
+        stepwise = b2.form_submit_button("단계별로 진행 (분석부터)",
+                                         help="추출 결과를 확인하고 질문에 답한 뒤, 전략을 직접 고르고 생성합니다.")
 
-    if not submitted:
+    if not (one_click or stepwise):
         return
     missing = [FIELD_LABELS[f] for f in REQUIRED if not values[f].strip()]
     if missing:
@@ -334,10 +390,13 @@ def step_input(mode: str) -> None:
     reset_from("extraction")
     ss.product, ss.media = product, items
     ss.started_at = time.time()
+    ss.one_click = bool(one_click)
     label = f"상품 정보와 이미지 {len(items)}조각을 분석하는 중입니다…" if items else "상품 정보를 분석하는 중입니다…"
     result = run_ai(label, pipeline.extract, product, items, mode=mode)
     if result:
         ss.extraction = result
+        if one_click:
+            run_one_click(mode)
 
 
 # ── ② 추출 결과 확인 ─────────────────────────────────────────
@@ -387,10 +446,7 @@ def step_extraction(mode: str) -> None:
                 st.rerun()
 
     if st.button("마케팅 전략 추천 받기", type="primary"):
-        reset_from("strategy")
-        result = run_ai("전략을 추천하는 중입니다…", pipeline.recommend, ss.product, ex, mode=mode)
-        if result:
-            ss.strategy = result
+        do_strategy(mode)
 
 
 # ── ③ 마케팅 전략 선택 ───────────────────────────────────────
@@ -432,13 +488,7 @@ def step_strategy(mode: str) -> None:
     if mode == "demo":
         st.caption("데모 모드에서는 전략 선택과 관계없이 저장된 결과를 보여 줍니다.")
     if st.button("현지화 상세페이지 생성", type="primary", disabled=not chosen):
-        reset_from("page")
-        ss.chosen_ids = [s.strategy_id for s in chosen]
-        result = run_ai("상세페이지를 만들고 → 현지 카피라이터 시각으로 다듬고 → 검수에 걸린 문구를 AI 가 스스로 고치는 중입니다… (3~6분 걸릴 수 있습니다)",
-                        refine.generate_with_review, product, ex, chosen, mode=mode)
-        if result:
-            ss.page = result.page
-            ss.refine_log = result
+        do_generate(chosen, mode)
 
 
 # ── ④ 생성 결과 검수 ─────────────────────────────────────────
@@ -512,15 +562,8 @@ def auto_replace_section(page, mode: str) -> None:
     c1, c2 = st.columns([3, 2])
     label = "이미지 속 한국어 문구 자동 교체" + (" (지시서를 고쳤으면 다시 실행)" if "auto_images" in ss else "")
     if c1.button(label, help="단색 배경 위 글자를 지우고 지시서의 현지어 문구를 같은 자리·같은 색으로 그립니다."):
-        targets = {g.image_id: [r.original_ko for r in g.text_replacements if r.original_ko] for g in guides}
-        located = run_ai("이미지에서 글자 위치를 찾고 현지어로 다시 그리는 중입니다…", pipeline.locate, ss.media, targets, mode=mode)
-        if located:
-            try:
-                ss.auto_images = overlay.overlay_all(ss.media, guides, located.boxes, page.language)
-                ss.locate_notes = located.notes
-                st.rerun()
-            except fonts.FontError as e:
-                st.error(str(e))
+        if do_auto_images(mode):
+            st.rerun()
     c1.caption(
         "흰 바탕·색 띠·색 원처럼 단색 배경 위의 글자만 바꿉니다. 사진·그라데이션 위 글자와 새로 넣는 문구는 건너뛰고 "
         "디자이너 지시서로 남깁니다. 결과는 각 지시서 카드에서 확인하고 끌 수 있으며, 직접 올린 이미지가 있으면 그것이 우선입니다."
@@ -594,6 +637,25 @@ def preview_panel(page, product, decisions: dict, guide_decisions: dict) -> None
                            include_unreviewed=True, image_order=order, replaced=replaced))
 
 
+def one_click_summary(page, ex, pending: int) -> None:
+    """원클릭으로 여기까지 왔을 때, 무엇이 자동으로 끝났고 사람이 볼 것이 몇 개인지 한눈에."""
+    auto_items, auto_guides = ss.auto_accepted
+    results = list(ss.get("auto_images", {}).values())
+    replaced = sum(len(r.done) for r in results)
+    elapsed = time.time() - ss.started_at if "started_at" in ss else None
+    lines = [
+        f"- 확인된 사실 {len(ex.facts)}개, 추가 확인 질문 {len(ex.questions)}건 (②에서 접힘)",
+        f"- 추천 전략 {len(ss.strategy.strategies)}개 모두 채택 (③에서 접힘)",
+        f"- 문구 {len(page.items)}개 중 {len(auto_items)}개, 이미지 지시서 {len(page.image_guides)}개 중 {len(auto_guides)}개 자동 수락",
+    ]
+    if results:
+        lines.append(f"- 이미지 속 한국어 문구 {replaced}건 자동 교체 (이미지 {sum(1 for r in results if r.jpeg)}장)")
+    head = f"**자동 진행이 끝났습니다. 사람이 볼 항목은 {pending}개입니다.**" if pending else "**자동 진행이 끝났습니다. 사람이 볼 항목이 없습니다. ⑤에서 바로 내보낼 수 있습니다.**"
+    if elapsed is not None:
+        head += f" (걸린 시간 {round(elapsed)}초)"
+    st.success(head + "\n\n" + "\n".join(lines))
+
+
 def refine_log_section() -> None:
     """생성 직후 AI 가 스스로 고친 기록. 데모 모드에서는 건너뛴 이유를 보여 준다."""
     log = ss.get("refine_log")
@@ -650,6 +712,8 @@ def step_review() -> None:
     original_flags = [f for f in flags if f.item_id.startswith(ORIGINAL_ITEM_ID)]
 
     statuses = [d["status"] for d in decisions.values()] + list(guide_decisions.values())
+    if ss.get("one_click"):
+        one_click_summary(page, ex, statuses.count("미검토"))
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("문구 · 이미지 지시서", f"{len(page.items)} · {len(page.image_guides)}")
     c2.metric("자동 수락", f"{len(auto_items)} · {len(auto_guides)}", help="검수를 모두 통과해 사람이 보지 않아도 되는 항목")
@@ -771,12 +835,21 @@ def step_export() -> None:
 # ── 화면 구성 ────────────────────────────────────────────────
 mode = sidebar()
 step_input(mode)
+folded = ss.get("one_click") and "page" in ss        # 원클릭으로 끝까지 왔으면 중간 단계는 접어서 보여 준다
 if "extraction" in ss:
     st.divider()
-    step_extraction(mode)
+    if folded:
+        with st.expander("② 추출 결과 확인 — 자동 진행됨 (펼쳐서 확인·질문 답하기)"):
+            step_extraction(mode)
+    else:
+        step_extraction(mode)
 if "strategy" in ss:
     st.divider()
-    step_strategy(mode)
+    if folded:
+        with st.expander("③ 마케팅 전략 선택 — 추천 전략 모두 채택됨 (펼쳐서 바꾸기)"):
+            step_strategy(mode)
+    else:
+        step_strategy(mode)
 if "page" in ss:
     st.divider()
     step_review()
