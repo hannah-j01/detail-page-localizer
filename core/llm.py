@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 DEFAULT_MODEL = "claude-opus-5-5"
 
-# 100만 토큰당 달러 가격(입력, 출력). 2026-10 기준 공식 가격. 가격이 바뀌면 여기만 고친다.
+# 100만 토큰당 달러 가격(입력, 출력). 2026-11 기준 공식 가격(Haiku 는 10만 토큰 이하 프롬프트 기준). 가격이 바뀌면 여기만 고친다.
 PRICES = {
     "claude-opus-5-5": (4.00, 20.00),
     "claude-sonnet-5-5": (2.00, 10.00),
@@ -46,7 +46,10 @@ def call_structured(system: str, content: str | list, output_model: type[BaseMod
             system=system,
             messages=[{"role": "user", "content": content}],
             output_format=output_model,
+            # Opus 5.5 는 기본 effort 가 medium 이다. 긴 상세페이지 생성이므로 high 로 명시한다.
+            output_config={"effort": "high"},
             # 안전 분류기가 요청을 거절하면 서버가 다른 모델로 자동 재시도한다.
+            # fallbacks 를 지원하지 않는 모델(예: Haiku)에서는 무시되고 원래 모델만 사용된다.
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         ) as stream:

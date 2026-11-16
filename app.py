@@ -26,8 +26,8 @@ STAGES = ["extraction", "strategy", "page"]           # 단계별 결과가 저�
 INPUT_KEYS = ["product", "media", "url_page", "url_images", "url_skipped", "up_images", "up_pdf", "url_input"]
 SEVERITY_ICON = {"높음": "🔴", "중간": "🟠", "낮음": "🟡"}
 REQUIRED = ["name", "features", "description_ko", "target_customer", "goal"]
-OPTIONAL = ["price", "specs", "reviews", "certifications", "brand_tone", "page_text"]
-LONG_FIELDS = {"features", "description_ko", "specs", "reviews", "certifications", "brand_tone", "page_text"}
+OPTIONAL = ["price", "specs", "reviews", "certifications", "brand_tone", "competitors", "sales_data", "page_text"]
+LONG_FIELDS = {"features", "description_ko", "specs", "reviews", "certifications", "brand_tone", "competitors", "sales_data", "page_text"}
 ss = st.session_state
 
 

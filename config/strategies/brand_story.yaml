@@ -1,0 +1,12 @@
+id: brand_story
+name: 브랜드 스토리 강조
+description: 브랜드의 시작 이유, 철학, 제조 배경을 짧게 전해 처음 보는 해외 브랜드에 대한 신뢰를 만든다.
+when: 브랜드 소개·철학·제조 배경이 입력 정보(상세 설명, 유지하고 싶은 말투)로 확인될 때
+required_evidence: 브랜드 소개 또는 제조 배경 정보
+sections: [상품 요약, 상세 설명, 이미지 문구]
+risks:
+  - 수상 이력, 역사, 규모를 지어내지 않는다
+  - 브랜드 스토리를 효능의 근거처럼 쓰지 않는다
+metrics: [상세페이지 체류 시간, 브랜드명 검색량, 재구매율]
+reviewed_at: 2026-11-16
+references: [PRODUCT_BRIEF.md 기능 3]

@@ -1,0 +1,11 @@
+id: ease_of_use
+name: 사용 편의성 강조
+description: 간단한 사용 단계, 휴대성, 용기·펌프 같은 편의 요소를 구체적으로 보여 준다.
+when: 사용 단계가 짧거나 용기·패키지의 편의 요소가 입력 정보나 이미지로 확인될 때
+required_evidence: 사용법 또는 용기·패키지 설명
+sections: [핵심 소구점, 사용법, FAQ]
+risks:
+  - 확인되지 않은 용기 기능(펌프, 밀봉, 리필 등)을 추정해서 쓰지 않는다
+metrics: [사용법 관련 문의 수, 구매 전환율]
+reviewed_at: 2026-11-16
+references: [PRODUCT_BRIEF.md 기능 3]

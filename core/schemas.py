@@ -23,6 +23,8 @@ class ProductInput(BaseModel):
     reviews: str = ""
     certifications: str = ""      # 인증·효능 증빙 자료 설명
     brand_tone: str = ""
+    competitors: str = ""         # 경쟁 상품 정보(상품명, 가격, 소구점 등)
+    sales_data: str = ""          # 기존 광고 성과·판매 데이터(클릭률, 전환율, 잘 팔린 옵션 등)
     source_url: str = ""          # 기존 상세페이지 URL
     page_text: str = ""           # URL 에서 가져온 페이지 텍스트(사용자가 정리 가능)
 
@@ -42,6 +44,8 @@ FIELD_LABELS = {
     "reviews": "보유 고객 후기",
     "certifications": "인증·효능 증빙 자료",
     "brand_tone": "유지하고 싶은 말투·표현",
+    "competitors": "경쟁 상품 정보",
+    "sales_data": "기존 광고 성과·판매 데이터",
     "source_url": "기존 상세페이지 URL",
     "page_text": "URL 에서 가져온 페이지 텍스트",
 }
