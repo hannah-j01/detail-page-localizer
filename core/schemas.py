@@ -193,7 +193,7 @@ class LocateResult(BaseModel):
 
 # ── 검수 결과(내부용, AI 응답 형식 아님) ───────────────────────
 class ReviewFlag(BaseModel):
-    source: Literal["AI", "규칙", "근거", "숫자"]
+    source: Literal["AI", "규칙", "근거", "숫자", "형식"]
     item_id: str
     expression: str
     risk: str

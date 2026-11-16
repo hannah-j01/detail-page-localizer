@@ -9,6 +9,8 @@ format_rules:
     value: 2026-07-27부터 미디어를 제외한 전 카테고리에서 공백 포함 75자 이하(브랜드명 포함). 그 이전 규칙은 200자. 복수의 2차 자료가 일치하지만 Seller Central 공식 페이지는 직접 확인하지 못함
     verified: false
     source: 2차 자료(SellerSprite, Zentail, Amalytix 2026) 종합. Seller Central 'Product title requirements' 에서 최종 확인 필요
+    # 코드가 읽는 한도. verified 가 false 인 동안은 경고만 하고 자동으로 줄이지 않는다. 공식 확인 후 verified: true 로 바꾸면 자기검수가 자동으로 줄인다.
+    limit: {section: 상품명, max_chars: 75, unit: chars, counts_spaces: true}
   - rule: 상품명 금지 표현
     value: 판촉 문구(free shipping, best seller), 전부 대문자, 특수문자 반복 금지라는 2차 자료
     verified: false

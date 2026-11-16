@@ -12,6 +12,8 @@ format_rules:
     value: 2026-07-27부터 미디어를 제외한 전 카테고리에서 공백 포함 75자 이하(브랜드명 포함). 그 이전 규칙은 전각 80자 이내. 복수의 2차 자료가 일치하지만 Seller Central 공식 페이지는 직접 확인하지 못함
     verified: false
     source: 2차 자료(SellerSprite, stockcrew 2026-07) 종합. Seller Central '商品名の要件とガイドライン' 에서 최종 확인 필요
+    # 코드가 읽는 한도. verified 가 false 인 동안은 경고만 하고 자동으로 줄이지 않는다. 공식 확인 후 verified: true 로 바꾸면 자기검수가 자동으로 줄인다.
+    limit: {section: 상품명, max_chars: 75, unit: chars, counts_spaces: true}
   - rule: 상품명 표기 규칙
     value: 공백·영숫자·하이픈은 반각, 반각 가타카나 금지, '送料無料'·'ベストセラー' 같은 판촉 문구 금지(2024년 기준 2차 자료)
     verified: false

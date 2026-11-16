@@ -6,11 +6,15 @@
 2. 근거 검수: 각 문구가 실제로 존재하는 '확인된 사실'에 연결되어 있는지 확인한다.
 3. 숫자 검수: 결과물에 나온 '숫자+단위'가 입력 자료에 같은 값·같은 단위로 있는지 확인한다(core/numbers.py).
    번역 과정의 숫자 오류(함량·용량·기간)는 일반 문구 오류보다 피해가 크기 때문이다.
+4. 형식 검수: 쇼핑몰 설정(format_rules 의 limit)에 글자 수 한도가 있으면 해당 섹션 문구의 길이를 잰다.
+   한도가 verified: true 면 '높음'(자기검수가 자동으로 줄임), false 면 '낮음'·[미확인 규칙] 표시(사람이 공식 규칙을 확인).
 
 사용자가 문구를 직접 고친 뒤에도 다시 돌릴 수 있도록 final_texts 로 최종 문구를 받는다.
 """
 import re
+import unicodedata
 
+from core.config_loader import load_all
 from core.numbers import find_unknown, source_quantities
 from core.schemas import Extraction, GeneratedPage, ProductInput, ReviewFlag
 
@@ -125,6 +129,52 @@ def number_review(
     return flags
 
 
+# ── 형식 검수(글자 수 한도) ───────────────────────────────────
+UNVERIFIED_TAG = "[미확인 규칙]"
+
+
+def text_length(text: str, unit: str = "chars", counts_spaces: bool = True) -> float:
+    """글자 수. unit='fullwidth' 는 전각 1, 반각 0.5 로 센다(일본 쇼핑몰의 '全角 N자' 규칙)."""
+    text = unicodedata.normalize("NFC", text.strip())
+    if not counts_spaces:
+        text = re.sub(r"\s+", "", text)
+    if unit == "fullwidth":
+        return sum(1.0 if unicodedata.east_asian_width(c) in "FWA" else 0.5 for c in text)
+    return float(len(text))
+
+
+def format_limits(marketplace: dict) -> list[dict]:
+    """쇼핑몰 설정에서 코드가 잴 수 있는 글자 수 한도만 뽑는다."""
+    return [{**r["limit"], "rule": r["rule"], "verified": bool(r.get("verified")), "source": r.get("source", "")}
+            for r in marketplace.get("format_rules", []) if r.get("limit")]
+
+
+def format_review(page: GeneratedPage, marketplace: dict, final_texts: dict[str, str] | None = None) -> list[ReviewFlag]:
+    final_texts = final_texts or {}
+    flags = []
+    for lim in format_limits(marketplace):
+        for item in page.items:
+            if item.section != lim["section"]:
+                continue
+            texts = [("", final_texts.get(item.id, item.localized))] + [(f"대안{i} ", v) for i, v in enumerate(item.variants, 1)]
+            for label, text in texts:
+                n = text_length(text, lim.get("unit", "chars"), lim.get("counts_spaces", True))
+                if n <= lim["max_chars"]:
+                    continue
+                if lim["verified"]:
+                    risk = f"{marketplace['name']} {lim['rule']}(확인됨)을 넘어 등록이 거부되거나 잘릴 수 있다."
+                    suggestion = f"{lim['max_chars']}자 이하로 줄인다(브랜드명 → 핵심 키워드 → 용량 순으로 남김)"
+                else:
+                    risk = f"{UNVERIFIED_TAG} {marketplace['name']} {lim['rule']}: 2차 자료 기준 한도를 넘는다. 공식 규칙을 확인하기 전에는 자동으로 줄이지 않는다."
+                    suggestion = (f"{lim['source']} 에서 한도를 확인하고, 맞으면 설정의 verified 를 true 로 바꾸면 다음부터 자동으로 줄인다. "
+                                  f"지금은 {lim['max_chars']}자 이하로 직접 줄이거나 그대로 둔다")
+                flags.append(ReviewFlag(
+                    source="형식", item_id=item.id, expression=f"{label}{n:g}자 / 한도 {lim['max_chars']}자",
+                    risk=risk, suggestion=suggestion, severity="높음" if lim["verified"] else "낮음",
+                ))
+    return flags
+
+
 def full_review(
     page: GeneratedPage,
     extraction: Extraction,
@@ -132,11 +182,13 @@ def full_review(
     product: ProductInput,
     final_texts: dict[str, str] | None = None,
 ) -> list[ReviewFlag]:
-    """AI 자체 점검 + 규칙 검수 + 근거 검수 + 숫자 검수를 합친다."""
+    """AI 자체 점검 + 규칙 검수 + 근거 검수 + 숫자 검수 + 형식 검수를 합친다."""
     ai_flags = [ReviewFlag(source="AI", **f.model_dump()) for f in page.risk_flags]
+    marketplace = load_all()["marketplaces"].get(product.marketplace, {})
     return (
         ai_flags
         + rule_review(page, rules, product, final_texts, extraction)
         + evidence_review(page, extraction)
         + number_review(page, extraction, product, final_texts)
+        + format_review(page, marketplace, final_texts)
     )

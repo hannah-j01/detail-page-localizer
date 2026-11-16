@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 from core import pipeline
 from core.config_loader import risk_rules_for
-from core.review import ORIGINAL_ITEM_ID, full_review
+from core.review import ORIGINAL_ITEM_ID, UNVERIFIED_TAG, full_review
 from core.schemas import Extraction, GeneratedPage, ProductInput, ReviewFlag, Revision, Strategy
 
 DEFAULT_ROUNDS = 2
@@ -45,6 +45,11 @@ def refine_rounds() -> int:
 def result_flags(flags: list[ReviewFlag]) -> list[ReviewFlag]:
     """원본(입력 자료)에 대한 표시를 뺀, 결과물에 대한 표시만."""
     return [f for f in flags if not f.item_id.startswith(ORIGINAL_ITEM_ID)]
+
+
+def fixable(flag: ReviewFlag) -> bool:
+    """AI 에게 고치라고 보낼 수 있는 표시인가. 미확인 글자 수 한도는 사람이 규칙을 확인해야 하므로 보내지 않는다."""
+    return not (flag.source == "형식" and flag.risk.startswith(UNVERIFIED_TAG))
 
 
 def auto_decisions(page: GeneratedPage, flags: list[ReviewFlag]) -> tuple[set[str], set[str]]:
@@ -148,7 +153,7 @@ def generate_with_review(
     rules = risk_rules_for(product.country, product.category)
     already_sent: dict[str, frozenset] = {}
     for n in range(1, rounds + 1):
-        flags = result_flags(full_review(result.page, extraction, rules, product))
+        flags = [f for f in result_flags(full_review(result.page, extraction, rules, product)) if fixable(f)]
         signatures = _signatures(flags)
         to_send = sorted(k for k, sig in signatures.items() if already_sent.get(k) != sig)
         if not to_send:

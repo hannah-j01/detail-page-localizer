@@ -15,7 +15,7 @@ from core.config_loader import load_all, marketplaces_for, risk_rules_for
 from core.edits import COL_BACK, COL_LOCALIZED, COL_ORIGINAL, apply_guide_edits, is_edited, table_rows, with_guides
 from core.export import INCLUDED, compute_metrics, final_texts, to_json, to_markdown, to_zip
 from core.preview import final_images, render_preview
-from core.review import ORIGINAL_ITEM_ID, full_review
+from core.review import ORIGINAL_ITEM_ID, format_limits, full_review, text_length
 from core.schemas import FIELD_LABELS, ProductInput
 
 load_dotenv()
@@ -463,7 +463,9 @@ def step_strategy(mode: str) -> None:
             st.markdown(f"- {h['text']} {'' if h['verified'] else '`미검증 가설`'}")
         st.markdown(f"**{market['name']} 등록 형식**")
         for r in market["format_rules"]:
-            st.markdown(f"- {r['rule']}: {r['value']} {'`확인됨`' if r['verified'] else '`미확인`'} · {r['source']}")
+            limit = r.get("limit")
+            auto = (f" · 한도 {limit['max_chars']}자 {'자동 적용' if r['verified'] else '초과 시 경고만(미확인)'}") if limit else ""
+            st.markdown(f"- {r['rule']}: {r['value']} {'`확인됨`' if r['verified'] else '`미확인`'} · {r['source']}{auto}")
         st.caption(f"설정 검토일: {market['reviewed_at']}")
 
     facts = {f.id: f for f in ex.facts}
@@ -507,13 +509,26 @@ def needs_attention(item_id: str, status: str, flags: list, auto: set) -> bool:
     return not (item_id in auto and status == "수락" and not flags)
 
 
-def item_card(item, facts: dict, flags: list, auto: bool = False) -> None:
+def length_caption(item, limits: list[dict]) -> str:
+    """섹션에 글자 수 한도가 있으면 '글자 수 72 / 75' 를 보여 준다(편집 중 실시간)."""
+    parts = []
+    for lim in limits:
+        if lim["section"] != item.section:
+            continue
+        n = text_length(ss.get(f"txt_{item.id}", item.localized), lim.get("unit", "chars"), lim.get("counts_spaces", True))
+        mark = "🔴 " if n > lim["max_chars"] else ""
+        parts.append(f"{mark}글자 수 {n:g} / {lim['max_chars']} ({lim['rule']}{'' if lim['verified'] else ' · 미확인 규칙'})")
+    return " · ".join(parts)
+
+
+def item_card(item, facts: dict, flags: list, auto: bool = False, limits: list[dict] = ()) -> None:
     with st.container(border=True):
         kind = "🧪 AI 제안 (사실 아님)" if item.is_ai_suggestion else "📌 사실 기반"
         st.markdown(f"**{item.id}** · {kind}" + (" · ✅ 검수 통과로 자동 수락" if auto else ""))
         st.text_area(f"{item.id} 현지화 문구", key=f"txt_{item.id}", height=text_height(item.localized),
                      label_visibility="collapsed")
-        st.caption(f"역번역: {item.back_translation_ko}")
+        length = length_caption(item, list(limits))
+        st.caption(f"역번역: {item.back_translation_ko}" + (f"  \n{length}" if length else ""))
         for f in flags:
             st.markdown(flag_line(f))
         st.radio("결정", ["미검토", "수락", "거절"], key=f"dec_{item.id}", horizontal=True,
@@ -753,6 +768,7 @@ def step_review() -> None:
     if edit_box is not None:
         with edit_box:
             facts = {f.id: f for f in ex.facts}
+            limits = format_limits(CFG["marketplaces"][product.marketplace])
             items = [i for i in page.items if not only_pending
                      or needs_attention(i.id, decisions[i.id]["status"], by_item.get(i.id, []), auto_items)]
             guides = [g for g in page.image_guides if not only_pending or g.image_id in ss.get("auto_images", {})
@@ -767,7 +783,7 @@ def step_review() -> None:
                 if item.section != section:
                     section = item.section
                     st.subheader(section)
-                item_card(item, facts, by_item.get(item.id, []), auto=item.id in auto_items)
+                item_card(item, facts, by_item.get(item.id, []), auto=item.id in auto_items, limits=limits)
             if guides:
                 st.subheader("이미지 수정 지시서")
                 st.caption(
