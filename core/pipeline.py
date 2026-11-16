@@ -126,6 +126,26 @@ def generate(
     return llm.call_structured(_system(), prompt, GeneratedPage)
 
 
+# ── 단계 ③-1 현지어 다듬기: 현지 카피라이터 시각으로 전체 문구를 손질 ──
+def polish(product: ProductInput, extraction: Extraction, page: GeneratedPage) -> tuple[Revision, dict | None]:
+    """번역투·경어·쇼핑몰 관행을 고친다. 사실·숫자는 바꾸지 않게 하고, 결과는 다시 코드 검수를 거친다(core/refine.py)."""
+    ctx = context_for(product.country, product.marketplace, product.category)
+    rules = [r for r in ctx["risk_rules"] if r["target"] == "localized"]
+    guides = [g.model_dump() for g in page.image_guides if g.text_replacements]
+    prompt = _render(
+        "polish",
+        marketplace_name=ctx["marketplace"]["name"],
+        language_name=ctx["country"]["language_name"],
+        items=_dump([i.model_dump() for i in page.items]),
+        image_guides=_dump(guides) if guides else "(없음)",
+        context=_context_text(product),
+        risk_rules=_dump(rules),
+        product=_product_text(product),
+        facts=_dump([f.model_dump() for f in extraction.facts]),
+    )
+    return llm.call_structured(_system(), prompt, Revision)
+
+
 # ── 단계 ③-2 자기검수: 검수에 걸린 항목만 다시 쓰기 ─────────────
 def revise(
     product: ProductInput, extraction: Extraction, page: GeneratedPage, flags: list[ReviewFlag],

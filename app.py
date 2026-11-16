@@ -172,7 +172,10 @@ def sidebar() -> str:
 
     if mode == "live":
         limit = get_secret("LIVE_CALL_LIMIT", "9")
-        st.sidebar.caption(f"모델: `{llm.current_model()}` · AI 호출 {ss.get('live_calls', 0)}/{limit}회 · 자기검수 최대 {refine.refine_rounds()}회")
+        st.sidebar.caption(
+            f"모델: `{llm.current_model()}` · AI 호출 {ss.get('live_calls', 0)}/{limit}회 · "
+            f"현지어 다듬기 {'켬' if refine.polish_enabled() else '끔'} · 자기검수 최대 {refine.refine_rounds()}회"
+        )
         costs = [u["cost_usd"] for u in ss.get("usages", []) if u.get("cost_usd") is not None]
         if costs:
             st.sidebar.caption(f"이번 세션 예상 비용: ${sum(costs):.3f}")
@@ -427,7 +430,7 @@ def step_strategy(mode: str) -> None:
     if st.button("현지화 상세페이지 생성", type="primary", disabled=not chosen):
         reset_from("page")
         ss.chosen_ids = [s.strategy_id for s in chosen]
-        result = run_ai("상세페이지와 이미지 수정 지시서를 만들고, 검수에 걸린 문구는 AI 가 스스로 고치는 중입니다… (2~5분 걸릴 수 있습니다)",
+        result = run_ai("상세페이지를 만들고 → 현지 카피라이터 시각으로 다듬고 → 검수에 걸린 문구를 AI 가 스스로 고치는 중입니다… (3~6분 걸릴 수 있습니다)",
                         refine.generate_with_review, product, ex, chosen, mode=mode)
         if result:
             ss.page = result.page
@@ -535,6 +538,15 @@ def refine_log_section() -> None:
     log = ss.get("refine_log")
     if log is None:
         return
+    polish = log.polish
+    if polish.skipped:
+        st.caption(f"현지어 다듬기: {polish.skipped}")
+    elif not polish.changed:
+        st.caption("현지어 다듬기: 현지 카피라이터 검토에서 고칠 문구가 없었습니다.")
+    else:
+        with st.expander(f"현지어 다듬기 기록 — 번역투·경어·표기를 고친 항목 {len(polish.changed)}개"):
+            st.caption("생성 직후 현지 카피라이터 역할의 AI 가 전체 문구를 한 번 더 손질한 기록입니다. 고친 문구도 아래 검수를 다시 거쳤습니다.")
+            st.markdown("\n".join(f"- {n}" for n in polish.notes) or "- (변경 기록 없음)")
     if log.skipped:
         st.caption(f"AI 자기검수: {log.skipped}")
         return

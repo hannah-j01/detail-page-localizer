@@ -1,4 +1,11 @@
-"""사람 손을 줄이는 두 장치: AI 자기검수 루프와 자동 승인 규칙.
+"""사람 손을 줄이는 세 장치: 현지어 다듬기, AI 자기검수 루프, 자동 승인 규칙.
+
+실제 AI 모드의 순서: 생성 → 현지어 다듬기 → 자기검수 루프 → 자동 승인.
+다듬기를 검수보다 앞에 두는 이유: 다듬다가 숫자·표현이 바뀌어도 뒤의 코드 검수가 잡아낸다.
+
+0. 현지어 다듬기(POLISH_PASS, 기본 켬)
+   현지 카피라이터 역할로 전체 문구의 번역투·경어·쇼핑몰 관행·표기를 손질한다. 사실·숫자는 바꾸지 않게 한다.
+   생성 때 AI 가 남긴 위험 표시는 지우지 않는다.
 
 1. 자기검수 루프(실제 AI 모드)
    생성 → 코드 검수(규칙·근거·숫자) + AI 자체 점검 → 걸린 항목만 AI 에게 다시 쓰게 함 → 다시 검수 → 최대 REFINE_ROUNDS 회.
@@ -20,6 +27,11 @@ from core.review import ORIGINAL_ITEM_ID, full_review
 from core.schemas import Extraction, GeneratedPage, ProductInput, ReviewFlag, Revision, Strategy
 
 DEFAULT_ROUNDS = 2
+
+
+def polish_enabled() -> bool:
+    """환경 변수 POLISH_PASS(기본 1). 0 이면 현지어 다듬기를 끈다."""
+    return os.environ.get("POLISH_PASS", "1").strip() not in ("0", "false", "False", "")
 
 
 def refine_rounds() -> int:
@@ -58,27 +70,45 @@ class RefineRound:
 
 
 @dataclass
+class PolishLog:
+    changed: list[str] = field(default_factory=list)   # 다듬어진 항목 ID
+    notes: list[str] = field(default_factory=list)     # AI 가 적은 변경 기록(한국어)
+    skipped: str = ""                                   # 건너뛴 이유. 비어 있으면 실행함
+
+
+@dataclass
 class RefineResult:
     page: GeneratedPage
     rounds: list[RefineRound] = field(default_factory=list)
     skipped: str = ""             # 자기검수를 건너뛴 이유. 비어 있으면 실행함
+    polish: PolishLog = field(default_factory=PolishLog)
 
 
-def merge(page: GeneratedPage, revision: Revision) -> GeneratedPage:
-    """고쳐 받은 항목을 같은 ID 자리에 넣는다. 그 항목의 AI 자체 점검 표시는 새로 받은 remaining_flags 로 바꾼다.
+def merge(page: GeneratedPage, revision: Revision, keep_flags: bool = False) -> GeneratedPage:
+    """고쳐 받은 항목을 같은 ID 자리에 넣는다. 목록에 없던 ID(AI 가 새로 만든 항목)는 무시한다.
 
-    목록에 없던 ID(AI 가 새로 만든 항목)는 무시한다.
+    keep_flags=False(자기검수): 고친 항목의 기존 AI 표시는 새로 받은 remaining_flags 로 바꾼다(해결된 표시를 지움).
+    keep_flags=True(다듬기): 기존 표시를 모두 남기고 새 표시만 덧붙인다(다듬기는 위험을 해결하는 단계가 아니다).
     """
     items = {i.id: i for i in revision.items}
     guides = {g.image_id: g for g in revision.image_guides}
     known = {i.id for i in page.items} | {g.image_id for g in page.image_guides}
     touched = (set(items) | set(guides)) & known
+    kept = page.risk_flags if keep_flags else [f for f in page.risk_flags if f.item_id not in touched]
+    new = [f for f in revision.remaining_flags if f.item_id in touched and f not in kept]
     return page.model_copy(update={
         "items": [items.get(i.id, i) for i in page.items],
         "image_guides": [guides.get(g.image_id, g) for g in page.image_guides],
-        "risk_flags": [f for f in page.risk_flags if f.item_id not in touched]
-        + [f for f in revision.remaining_flags if f.item_id in touched],
+        "risk_flags": kept + new,
     })
+
+
+def touched_ids(page: GeneratedPage, revision: Revision) -> list[str]:
+    """revision 이 실제로 바꾼(내용이 달라진) 항목 ID."""
+    before = {i.id: i for i in page.items} | {g.image_id: g for g in page.image_guides}
+    changed = [i.id for i in revision.items if i.id in before and i != before[i.id]]
+    changed += [g.image_id for g in revision.image_guides if g.image_id in before and g != before[g.image_id]]
+    return changed
 
 
 def _signatures(flags: list[ReviewFlag]) -> dict[str, frozenset]:
@@ -99,7 +129,18 @@ def generate_with_review(
     rounds = refine_rounds()
     if mode == "demo":
         result.skipped = "데모 모드에서는 저장된 결과를 그대로 보여 주므로 자기검수를 건너뜁니다."
+        result.polish.skipped = "데모 모드에서는 건너뜁니다."
         return result, usages
+
+    if polish_enabled():
+        revision, usage = pipeline.polish(product, extraction, result.page)
+        if usage:
+            usages.append(usage)
+        result.polish = PolishLog(changed=touched_ids(result.page, revision), notes=list(revision.notes))
+        result.page = merge(result.page, revision, keep_flags=True)
+    else:
+        result.polish.skipped = "POLISH_PASS=0 으로 꺼져 있습니다."
+
     if rounds == 0:
         result.skipped = "REFINE_ROUNDS=0 으로 자기검수가 꺼져 있습니다."
         return result, usages
