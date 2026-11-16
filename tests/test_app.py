@@ -14,6 +14,13 @@ def click(at: AppTest, label: str) -> AppTest:
     return button.click().run()
 
 
+def show_all(at: AppTest) -> AppTest:
+    """'검수 필요 항목만 보기'를 꺼서 자동 수락된 항목의 편집 칸도 보이게 한다."""
+    at = at.toggle(key="review_only_pending").set_value(False).run()
+    assert not at.exception
+    return at
+
+
 @pytest.fixture(scope="module")
 def reviewed() -> AppTest:
     at = AppTest.from_file(str(APP), default_timeout=120).run()
@@ -27,16 +34,22 @@ def reviewed() -> AppTest:
     return at
 
 
-def test_review_screen_renders_items_and_preview(reviewed: AppTest):
+def test_review_screen_auto_accepts_clean_items_and_shows_only_pending(reviewed: AppTest):
     at = reviewed
     page = at.session_state["page"]
+    assert at.session_state["dec_S1"] == "미검토" and at.session_state["dec_S2"] == "수락"   # S1 은 AI 표시, S2 는 검수 통과
+    assert at.session_state["gdec_I1"] == "수락"
+    shown = {t.key[4:] for t in at.text_area if t.key and t.key.startswith("txt_")}
+    assert shown == {"S1", "S3", "S4", "S17"}            # 검수 필요 항목만 편집 칸이 보인다
+    html = at.get("html")[0].value
+    assert 'class="dp"' in html and page.items[1].localized.split("\n")[0] in html   # 미리보기에는 자동 수락 항목도 보인다
+
+    at = show_all(at)
     assert all(at.text_area(key=f"txt_{i.id}") for i in page.items)
-    html = [e for e in at.get("html")]
-    assert html and 'class="dp"' in html[0].value and page.items[0].localized.split("\n")[0] in html[0].value
 
 
 def test_editing_text_updates_preview_and_marks_edited(reviewed: AppTest):
-    at = reviewed
+    at = show_all(reviewed)
     at.text_area(key="txt_S2").set_value("テスト用に直接修正した文").run()
     at.radio(key="dec_S2").set_value("수락").run()
     assert not at.exception
@@ -57,7 +70,7 @@ def test_accept_all_enables_export_with_final_preview(reviewed: AppTest):
 
 
 def test_image_order_controls_update_preview(reviewed: AppTest):
-    at = reviewed
+    at = show_all(reviewed)
     at.number_input(key="gord_I1").set_value(0).run()
     assert not at.exception and 'alt="I1"' not in at.get("html")[0].value
     at.number_input(key="gord_I1").set_value(9).run()

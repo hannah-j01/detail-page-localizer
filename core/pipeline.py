@@ -12,7 +12,7 @@ from core import llm
 from core.config_loader import context_for, load_all
 from core.media import MediaItem, build_media, open_image
 from core.schemas import (
-    FIELD_LABELS, Extraction, GeneratedPage, ProductInput, Strategy, StrategyResult,
+    FIELD_LABELS, Extraction, GeneratedPage, ProductInput, ReviewFlag, Revision, Strategy, StrategyResult,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -124,6 +124,33 @@ def generate(
         images=_dump([i.model_dump() for i in extraction.images]) if extraction.images else "(이미지 없음)",
     )
     return llm.call_structured(_system(), prompt, GeneratedPage)
+
+
+# ── 단계 ③-2 자기검수: 검수에 걸린 항목만 다시 쓰기 ─────────────
+def revise(
+    product: ProductInput, extraction: Extraction, page: GeneratedPage, flags: list[ReviewFlag],
+) -> tuple[Revision, dict | None]:
+    """검수에 걸린 문구·이미지 지시서와 그 표시만 보내 다시 쓰게 한다(이미지는 보내지 않는다).
+
+    생성 호출보다 훨씬 짧은 요청이다. 데모 모드에서는 호출하지 않는다(core/refine.py 가 건너뛴다).
+    """
+    ctx = context_for(product.country, product.marketplace, product.category)
+    by_id: dict[str, list[dict]] = {}
+    for f in flags:
+        by_id.setdefault(f.item_id, []).append(f.model_dump())
+    items = [{**i.model_dump(), "검수_표시": by_id[i.id]} for i in page.items if i.id in by_id]
+    guides = [{**g.model_dump(), "검수_표시": by_id[g.image_id]} for g in page.image_guides if g.image_id in by_id]
+    rules = [r for r in ctx["risk_rules"] if r["target"] == "localized"]
+    prompt = _render(
+        "revise",
+        language_name=ctx["country"]["language_name"],
+        items=_dump(items) if items else "(없음)",
+        image_guides=_dump(guides) if guides else "(없음)",
+        context=_context_text(product),
+        risk_rules=_dump(rules),
+        facts=_dump([f.model_dump() for f in extraction.facts]),
+    )
+    return llm.call_structured(_system(), prompt, Revision)
 
 
 def save_as_demo(name: str, data) -> None:

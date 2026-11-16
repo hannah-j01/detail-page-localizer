@@ -24,20 +24,27 @@ def final_texts(page: GeneratedPage, decisions: dict) -> dict[str, str]:
 def compute_metrics(
     page: GeneratedPage, decisions: dict, guide_decisions: dict, strategy: StrategyResult,
     chosen_ids: list[str], elapsed_sec: float | None, usages: list[dict],
+    auto_items: set[str] = frozenset(), auto_guides: set[str] = frozenset(),
 ) -> dict:
+    """auto_items / auto_guides 는 검수를 통과해 자동 수락된 ID. 사람이 손대지 않고 '수락'으로 남은 것만 자동 수락으로 센다."""
     counts = Counter(decisions.get(i.id, {}).get("status", "미검토") for i in page.items)
     guide_counts = Counter(guide_decisions.get(g.image_id, "미검토") for g in page.image_guides)
     total = len(page.items)
     costs = [u["cost_usd"] for u in usages if u.get("cost_usd") is not None]
+    auto_accepted = sum(1 for i in page.items if i.id in auto_items and decisions.get(i.id, {}).get("status") == "수락")
+    auto_guides_accepted = sum(1 for g in page.image_guides if g.image_id in auto_guides and guide_decisions.get(g.image_id) == "수락")
     return {
         "문구_총개수": total,
         "그대로_수락": counts["수락"],
+        "자동_수락": auto_accepted,
+        "사람이_검토한_문구": total - auto_accepted,
         "직접_수정": counts["편집"],
         "거절": counts["거절"],
         "미검토": counts["미검토"],
         "그대로_수락_비율": round(counts["수락"] / total, 3) if total else 0,
         "이미지_지시서_수": len(page.image_guides),
         "이미지_지시서_수락": guide_counts["수락"],
+        "이미지_지시서_자동_수락": auto_guides_accepted,
         "이미지_지시서_직접_수정": guide_counts["편집"],
         "전략_추천수": len(strategy.strategies),
         "전략_채택수": len(chosen_ids),

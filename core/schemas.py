@@ -168,6 +168,14 @@ class GeneratedPage(BaseModel):
     missing_info: list[str]
 
 
+# ── 단계 ③-2 자기검수: 검수에 걸린 항목만 다시 쓰기 ─────────────
+class Revision(BaseModel):
+    items: list[PageItem] = Field(description="고쳐 쓴 문구 항목. 검수에 걸린 항목만, id 는 그대로")
+    image_guides: list[ImageGuide] = Field(description="고쳐 쓴 이미지 지시서. 검수에 걸린 것만, image_id 는 그대로")
+    remaining_flags: list[RiskFlag] = Field(description="문구를 고치는 것만으로 해결되지 않아 사람이 확인해야 하는 표시")
+    notes: list[str] = Field(description="무엇을 왜 고쳤는지 한국어 한 줄씩")
+
+
 # ── 검수 결과(내부용, AI 응답 형식 아님) ───────────────────────
 class ReviewFlag(BaseModel):
     source: Literal["AI", "규칙", "근거", "숫자"]

@@ -10,7 +10,7 @@ import time
 import streamlit as st
 from dotenv import load_dotenv
 
-from core import llm, media, pipeline, url_import
+from core import llm, media, pipeline, refine, url_import
 from core.config_loader import load_all, marketplaces_for, risk_rules_for
 from core.edits import COL_BACK, COL_LOCALIZED, COL_ORIGINAL, apply_guide_edits, is_edited, table_rows, with_guides
 from core.export import INCLUDED, compute_metrics, final_texts, to_json, to_markdown, to_zip
@@ -49,7 +49,7 @@ def get_secret(name: str, default: str = "") -> str:
 
 def reset_from(stage: str) -> None:
     """해당 단계와 그 뒤 단계의 결과를 지운다(입력을 바꾸면 이후 결과는 무효)."""
-    for key in STAGES[STAGES.index(stage):]:
+    for key in STAGES[STAGES.index(stage):] + ["auto_accepted", "refine_log"]:
         ss.pop(key, None)
     for key in [k for k in ss.keys() if k.startswith(("dec_", "txt_", "gdec_", "gedit_", "ginst_", "gkeep_", "gord_", "gimg_", "gjpeg_"))]:
         del ss[key]
@@ -74,9 +74,10 @@ def run_ai(label: str, fn, *args, mode: str):
         except llm.LLMError as e:
             st.error(str(e))
             return None
-    if usage:
-        ss.live_calls = ss.get("live_calls", 0) + 1
-        ss.setdefault("usages", []).append(usage)
+    usages = [u for u in (usage if isinstance(usage, list) else [usage]) if u]   # 자기검수는 호출이 여러 번이다
+    if usages:
+        ss.live_calls = ss.get("live_calls", 0) + len(usages)
+        ss.setdefault("usages", []).extend(usages)
     return result
 
 
@@ -171,7 +172,7 @@ def sidebar() -> str:
 
     if mode == "live":
         limit = get_secret("LIVE_CALL_LIMIT", "9")
-        st.sidebar.caption(f"모델: `{llm.current_model()}` · AI 호출 {ss.get('live_calls', 0)}/{limit}회")
+        st.sidebar.caption(f"모델: `{llm.current_model()}` · AI 호출 {ss.get('live_calls', 0)}/{limit}회 · 자기검수 최대 {refine.refine_rounds()}회")
         costs = [u["cost_usd"] for u in ss.get("usages", []) if u.get("cost_usd") is not None]
         if costs:
             st.sidebar.caption(f"이번 세션 예상 비용: ${sum(costs):.3f}")
@@ -426,10 +427,11 @@ def step_strategy(mode: str) -> None:
     if st.button("현지화 상세페이지 생성", type="primary", disabled=not chosen):
         reset_from("page")
         ss.chosen_ids = [s.strategy_id for s in chosen]
-        result = run_ai("상세페이지와 이미지 수정 지시서를 만드는 중입니다… (1~3분 걸릴 수 있습니다)",
-                        pipeline.generate, product, ex, chosen, mode=mode)
+        result = run_ai("상세페이지와 이미지 수정 지시서를 만들고, 검수에 걸린 문구는 AI 가 스스로 고치는 중입니다… (2~5분 걸릴 수 있습니다)",
+                        refine.generate_with_review, product, ex, chosen, mode=mode)
         if result:
-            ss.page = result
+            ss.page = result.page
+            ss.refine_log = result
 
 
 # ── ④ 생성 결과 검수 ─────────────────────────────────────────
@@ -443,9 +445,15 @@ def text_height(text: str) -> int:
     return min(240, max(68, 30 + 24 * lines))
 
 
-def item_card(item, facts: dict, flags: list) -> None:
+def needs_attention(item_id: str, status: str, flags: list, auto: set) -> bool:
+    """자동 수락됐고 사람이 손대지 않았고 표시도 없는 항목만 숨긴다. 나머지는 모두 사람이 본다."""
+    return not (item_id in auto and status == "수락" and not flags)
+
+
+def item_card(item, facts: dict, flags: list, auto: bool = False) -> None:
     with st.container(border=True):
-        st.markdown(f"**{item.id}** · {'🧪 AI 제안 (사실 아님)' if item.is_ai_suggestion else '📌 사실 기반'}")
+        kind = "🧪 AI 제안 (사실 아님)" if item.is_ai_suggestion else "📌 사실 기반"
+        st.markdown(f"**{item.id}** · {kind}" + (" · ✅ 검수 통과로 자동 수락" if auto else ""))
         st.text_area(f"{item.id} 현지화 문구", key=f"txt_{item.id}", height=text_height(item.localized),
                      label_visibility="collapsed")
         st.caption(f"역번역: {item.back_translation_ko}")
@@ -464,7 +472,7 @@ def item_card(item, facts: dict, flags: list) -> None:
                 st.markdown("**테스트용 대안**  \n" + "  \n".join(f"- {v}" for v in item.variants))
 
 
-def guide_card(g, thumbs: dict, flags: list) -> None:
+def guide_card(g, thumbs: dict, flags: list, auto: bool = False) -> None:
     """g 는 AI 원본 지시서. 표 편집기에는 원본을 넘기고, 변경분은 Streamlit 이 따로 기억한다."""
     ss.setdefault(f"ginst_{g.image_id}", "\n".join(g.edit_instructions))
     ss.setdefault(f"gkeep_{g.image_id}", "\n".join(g.keep_unchanged))
@@ -476,7 +484,7 @@ def guide_card(g, thumbs: dict, flags: list) -> None:
         else:
             c1.markdown(f"**{g.image_id}**  \n🆕 새로 만들 이미지")
         order = "삭제 권장" if g.action == "삭제" else f"{g.recommended_order}번째"
-        c2.markdown(f"**{g.image_id} · {g.action}** ({order})")
+        c2.markdown(f"**{g.image_id} · {g.action}** ({order})" + (" · ✅ 검수 통과로 자동 수락" if auto else ""))
         c2.caption(g.reason)
         if is_edited(g, edited_guide(g)):
             c2.caption("✏️ 직접 수정됨 — 고친 행의 역번역은 결과 파일에 '역번역 없음'으로 표시됩니다.")
@@ -522,23 +530,46 @@ def preview_panel(page, product, decisions: dict, guide_decisions: dict) -> None
                            include_unreviewed=True, image_order=order, replaced=replaced))
 
 
+def refine_log_section() -> None:
+    """생성 직후 AI 가 스스로 고친 기록. 데모 모드에서는 건너뛴 이유를 보여 준다."""
+    log = ss.get("refine_log")
+    if log is None:
+        return
+    if log.skipped:
+        st.caption(f"AI 자기검수: {log.skipped}")
+        return
+    if not log.rounds:
+        st.caption("AI 자기검수: 생성 직후 검수에 걸린 항목이 없어 다시 쓰지 않았습니다.")
+        return
+    first, last = log.rounds[0], log.rounds[-1]
+    with st.expander(f"AI 자기검수 기록 {len(log.rounds)}회 — 검수에 걸린 항목 {len(first.flagged_before)}개 → 남은 항목 {len(last.flagged_after)}개"):
+        st.caption("남은 항목은 AI 가 문구만으로는 해결할 수 없다고 본 것(동의·정책·증빙 확인 등)이라 아래 '검수 필요'에 들어 있습니다.")
+        for r in log.rounds:
+            st.markdown(f"**{r.round}회차** — 다시 쓴 항목: {', '.join(r.sent)} → 남은 항목: {', '.join(r.flagged_after) or '없음'}")
+            st.markdown("\n".join(f"- {n}" for n in r.notes) or "- (변경 기록 없음)")
+
+
 def step_review() -> None:
     page, product, ex = ss.page, ss.product, ss.extraction
     st.header(STEPS[3])
     st.caption(
+        "위험·근거·숫자 검수를 모두 통과한 항목은 자동으로 수락되어 있고, 표시가 남은 항목만 '검수 필요'로 보여 줍니다. "
         "문구를 고치거나 수락·거절을 고르면 미리보기에 바로 반영됩니다. "
         "직접 고친 뒤 수락하면 '직접 수정'으로 기록되고, 위험 표현·숫자 검사도 고친 내용으로 다시 실행됩니다."
     )
+    rules = risk_rules_for(product.country, product.category)
+    if "auto_accepted" not in ss:          # 자동 승인은 AI 결과 그대로를 기준으로 한 번만 정한다
+        ss.auto_accepted = refine.auto_decisions(page, full_review(page, ex, rules, product))
+    auto_items, auto_guides = ss.auto_accepted
 
     for item in page.items:      # 위젯 기본값을 먼저 넣어 둔다
         ss.setdefault(f"txt_{item.id}", item.localized)
-        ss.setdefault(f"dec_{item.id}", "미검토")
+        ss.setdefault(f"dec_{item.id}", "수락" if item.id in auto_items else "미검토")
     for g in page.image_guides:
-        ss.setdefault(f"gdec_{g.image_id}", "미검토")
+        ss.setdefault(f"gdec_{g.image_id}", "수락" if g.image_id in auto_guides else "미검토")
 
     decisions, guide_decisions = collect_decisions(page), collect_guide_decisions(page)
     edited_page = current_page(page)
-    rules = risk_rules_for(product.country, product.category)
     flags = full_review(edited_page, ex, rules, product, final_texts(page, decisions))
     by_item: dict[str, list] = {}
     for f in flags:
@@ -546,13 +577,15 @@ def step_review() -> None:
     original_flags = [f for f in flags if f.item_id.startswith(ORIGINAL_ITEM_ID)]
 
     statuses = [d["status"] for d in decisions.values()] + list(guide_decisions.values())
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("문구 · 이미지 지시서", f"{len(page.items)} · {len(page.image_guides)}")
-    c2.metric("미검토", statuses.count("미검토"))
-    c3.metric("결과물 위험 표시", len(flags) - len(original_flags))
-    c4.metric("원본의 위험 표현", len(original_flags))
-    c5.metric("AI 제안(사실 아님)", sum(i.is_ai_suggestion for i in page.items))
+    c2.metric("자동 수락", f"{len(auto_items)} · {len(auto_guides)}", help="검수를 모두 통과해 사람이 보지 않아도 되는 항목")
+    c3.metric("검수 필요", statuses.count("미검토"), help="표시가 남아 사람이 수락·거절을 정해야 하는 항목")
+    c4.metric("결과물 위험 표시", len(flags) - len(original_flags))
+    c5.metric("원본의 위험 표현", len(original_flags))
+    c6.metric("AI 제안(사실 아님)", sum(i.is_ai_suggestion for i in page.items))
 
+    refine_log_section()
     if original_flags:
         with st.expander(f"원본(텍스트·이미지)에서 발견된 위험 표현 ({len(original_flags)}건)"):
             for f in original_flags:
@@ -561,8 +594,10 @@ def step_review() -> None:
         with st.expander(f"사용하지 않은 주장과 빠진 정보 ({len(page.missing_info)}건)"):
             st.markdown("\n".join(f"- {m}" for m in page.missing_info))
 
-    left, right = st.columns([3, 2])
+    left, mid, right = st.columns([3, 2, 2])
     layout = left.segmented_control("보기 방식", LAYOUTS, default=LAYOUTS[0], key="review_layout") or LAYOUTS[0]
+    only_pending = mid.toggle("검수 필요 항목만 보기", value=True, key="review_only_pending",
+                              help="자동 수락된 항목은 숨깁니다. 미리보기에는 모두 보입니다. 직접 고치거나 결정을 바꾼 항목은 다시 보입니다.")
     if right.button("검토하지 않은 항목 모두 수락"):
         for key in [k for k in ss.keys() if k.startswith(("dec_", "gdec_"))]:
             if ss[key] == "미검토":
@@ -580,21 +615,30 @@ def step_review() -> None:
     if edit_box is not None:
         with edit_box:
             facts = {f.id: f for f in ex.facts}
+            items = [i for i in page.items if not only_pending
+                     or needs_attention(i.id, decisions[i.id]["status"], by_item.get(i.id, []), auto_items)]
+            guides = [g for g in page.image_guides if not only_pending
+                      or needs_attention(g.image_id, guide_decisions[g.image_id], by_item.get(g.image_id, []), auto_guides)]
+            hidden = len(page.items) - len(items) + len(page.image_guides) - len(guides)
+            if hidden:
+                st.caption(f"자동 수락되어 숨긴 항목 {hidden}개. 모두 보려면 '검수 필요 항목만 보기'를 끄세요.")
+            if not items and not guides:
+                st.success("검수가 필요한 항목이 없습니다. 모든 문구와 지시서가 검수를 통과했습니다.")
             section = None
-            for item in page.items:
+            for item in items:
                 if item.section != section:
                     section = item.section
                     st.subheader(section)
-                item_card(item, facts, by_item.get(item.id, []))
-            if page.image_guides:
+                item_card(item, facts, by_item.get(item.id, []), auto=item.id in auto_items)
+            if guides:
                 st.subheader("이미지 수정 지시서")
                 st.caption(
                     "디자이너나 이미지 편집 도구에 넘길 지시서입니다. 추천 순서대로 정렬했습니다. "
                     "'바꾸면 안 되는 요소'는 이미지 편집 중 제품 외형·인증 표시·수치가 왜곡되지 않았는지 확인하는 목록입니다."
                 )
                 thumbs = media_by_id()
-                for g in sorted(page.image_guides, key=lambda g: (g.recommended_order == 0, g.recommended_order)):
-                    guide_card(g, thumbs, by_item.get(g.image_id, []))
+                for g in sorted(guides, key=lambda g: (g.recommended_order == 0, g.recommended_order)):
+                    guide_card(g, thumbs, by_item.get(g.image_id, []), auto=g.image_id in auto_guides)
     if prev_box is not None:
         with prev_box:
             preview_panel(edited_page, product, decisions, guide_decisions)
@@ -610,8 +654,9 @@ def step_export() -> None:
     rules = risk_rules_for(product.country, product.category)
     flags = full_review(page, ex, rules, product, final_texts(page, decisions))
     elapsed = time.time() - ss.started_at if "started_at" in ss else None
+    auto_items, auto_guides = ss.get("auto_accepted", (set(), set()))
     metrics = compute_metrics(page, decisions, guide_decisions, sr, ss.get("chosen_ids", []), elapsed,
-                              ss.get("usages", []))
+                              ss.get("usages", []), auto_items, auto_guides)
 
     accepted = any(status in INCLUDED for status in [d["status"] for d in decisions.values()] + list(guide_decisions.values()))
     if not accepted:
