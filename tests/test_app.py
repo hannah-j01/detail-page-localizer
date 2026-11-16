@@ -76,3 +76,14 @@ def test_image_order_controls_update_preview(reviewed: AppTest):
     at.number_input(key="gord_I1").set_value(9).run()
     html = at.get("html")[0].value
     assert html.index('alt="I4"') < html.index('alt="I1"')
+
+
+def test_auto_image_replacement_feeds_preview(reviewed: AppTest):
+    at = click(reviewed, "이미지 속 한국어 문구 자동 교체")
+    assert not at.exception
+    results = at.session_state["auto_images"]
+    assert set(results) == {"I1", "I2", "I3", "I4"} and all(r.jpeg for r in results.values())
+    html = at.get("html")[0].value
+    assert 'alt="I1"' in html
+    at.checkbox(key="guse_I1").set_value(False).run()           # 끄면 원본으로 돌아간다
+    assert not at.exception

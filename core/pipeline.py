@@ -12,7 +12,8 @@ from core import llm
 from core.config_loader import context_for, load_all
 from core.media import MediaItem, build_media, open_image
 from core.schemas import (
-    FIELD_LABELS, Extraction, GeneratedPage, ProductInput, ReviewFlag, Revision, Strategy, StrategyResult,
+    FIELD_LABELS, Extraction, GeneratedPage, LocateResult, ProductInput, ReviewFlag, Revision, Strategy,
+    StrategyResult, TextBox,
 )
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -171,6 +172,49 @@ def revise(
         facts=_dump([f.model_dump() for f in extraction.facts]),
     )
     return llm.call_structured(_system(), prompt, Revision)
+
+
+# ── 이미지 속 문구 위치 찾기(자동 교체용) ─────────────────────
+def locate(media: list[MediaItem], targets: dict[str, list[str]], mode: str) -> tuple[LocateResult, dict | None]:
+    """targets = {이미지 ID: [찾을 한국어 문구…]}. 해당 이미지만 다시 보낸다(이미지 토큰 비용 발생).
+
+    데모 모드는 demo/text_boxes.json(데모 이미지를 그릴 때 기록한 정확한 위치)을 쓴다.
+    """
+    if mode == "demo":
+        return load_demo_boxes(media, targets), None
+    content = []
+    for item in media:
+        if item.id not in targets:
+            continue
+        content.append({"type": "text", "text": f"[이미지 {item.id}] {item.width}×{item.height}px"})
+        content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": item.b64()}})
+    content.append({"type": "text", "text": _render("locate", targets=_dump(targets))})
+    return llm.call_structured(_system(), content, LocateResult)
+
+
+def load_demo_boxes(media: list[MediaItem], targets: dict[str, list[str]]) -> LocateResult:
+    """데모 이미지의 전체 좌표 글자 위치를 조각(I1 …) 좌표로 옮기고 0~1000 비율로 바꾼다."""
+    from core.media import open_image, slice_bounds
+
+    raw = json.loads((DEMO_DIR / "text_boxes.json").read_text(encoding="utf-8"))
+    img = open_image((DEMO_DIR / "detail_page.jpg").read_bytes())
+    bounds = slice_bounds(img)
+    by_id = {m.id: m for m in media}
+    boxes = []
+    for n, (top, bottom) in enumerate(zip(bounds, bounds[1:]), 1):
+        item = by_id.get(f"I{n}")
+        if item is None or item.id not in targets:
+            continue
+        for b in raw:
+            x0, y0, x1, y1 = b["box"]
+            if y0 < top or y1 > bottom:
+                continue
+            boxes.append(TextBox(
+                image_id=item.id, text_ko=b["text"],
+                x0=round(x0 / img.width * 1000), y0=round((y0 - top) / (bottom - top) * 1000),
+                x1=round(x1 / img.width * 1000), y1=round((y1 - top) / (bottom - top) * 1000),
+            ))
+    return LocateResult(boxes=boxes, notes=[])
 
 
 def save_as_demo(name: str, data) -> None:

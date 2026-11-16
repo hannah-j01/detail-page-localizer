@@ -10,7 +10,7 @@ import time
 import streamlit as st
 from dotenv import load_dotenv
 
-from core import llm, media, pipeline, refine, url_import
+from core import fonts, llm, media, overlay, pipeline, refine, url_import
 from core.config_loader import load_all, marketplaces_for, risk_rules_for
 from core.edits import COL_BACK, COL_LOCALIZED, COL_ORIGINAL, apply_guide_edits, is_edited, table_rows, with_guides
 from core.export import INCLUDED, compute_metrics, final_texts, to_json, to_markdown, to_zip
@@ -49,9 +49,9 @@ def get_secret(name: str, default: str = "") -> str:
 
 def reset_from(stage: str) -> None:
     """해당 단계와 그 뒤 단계의 결과를 지운다(입력을 바꾸면 이후 결과는 무효)."""
-    for key in STAGES[STAGES.index(stage):] + ["auto_accepted", "refine_log"]:
+    for key in STAGES[STAGES.index(stage):] + ["auto_accepted", "refine_log", "auto_images", "locate_notes"]:
         ss.pop(key, None)
-    for key in [k for k in ss.keys() if k.startswith(("dec_", "txt_", "gdec_", "gedit_", "ginst_", "gkeep_", "gord_", "gimg_", "gjpeg_"))]:
+    for key in [k for k in ss.keys() if k.startswith(("dec_", "txt_", "gdec_", "gedit_", "ginst_", "gkeep_", "gord_", "gimg_", "gjpeg_", "guse_"))]:
         del ss[key]
 
 
@@ -130,7 +130,11 @@ def image_overrides(page) -> tuple[dict, dict, set]:
         if f"gord_{g.image_id}" in ss:
             order[g.image_id] = int(ss[f"gord_{g.image_id}"])
         uploaded = ss.get(f"gimg_{g.image_id}")
-        if uploaded is None:
+        if uploaded is None:                 # 직접 올린 이미지가 없으면 자동 교체 결과를 쓴다
+            auto = ss.get("auto_images", {}).get(g.image_id)
+            if auto is not None and auto.jpeg and ss.get(f"guse_{g.image_id}", True):
+                images[g.image_id] = auto.jpeg
+                replaced.add(g.image_id)
             continue
         cached = ss.get(f"gjpeg_{g.image_id}")
         if not cached or cached[0] != uploaded.file_id:
@@ -475,6 +479,62 @@ def item_card(item, facts: dict, flags: list, auto: bool = False) -> None:
                 st.markdown("**테스트용 대안**  \n" + "  \n".join(f"- {v}" for v in item.variants))
 
 
+def auto_result(g, col, has_upload: bool) -> None:
+    """이미지 속 문구 자동 교체 결과(있을 때만): 결과 이미지, 사용 여부, 항목별 상태."""
+    result = ss.get("auto_images", {}).get(g.image_id)
+    if result is None:
+        return
+    if not result.jpeg:
+        col.caption("🤖 자동 교체: 바꿀 수 있는 글자가 없었습니다. " + " / ".join(f"{r.original_ko or r.localized}: {r.status[5:]}" for r in result.skipped))
+        return
+    ss.setdefault(f"guse_{g.image_id}", True)
+    a1, a2 = col.columns([1, 2.2])
+    a1.image(result.jpeg, caption=f"{g.image_id} 자동 교체 결과")
+    a2.checkbox("자동 교체 이미지 사용", key=f"guse_{g.image_id}", disabled=has_upload,
+                help="끄면 원본 이미지와 '바꿀 문구' 표가 들어갑니다. 직접 올린 교체 이미지가 있으면 그것이 우선입니다.")
+    done = result.done
+    summary = f"교체 {sum(r.status == '교체' for r in done)}건 · 삭제 {sum(r.status == '삭제' for r in done)}건"
+    if result.skipped:
+        summary += f" · 건너뜀 {len(result.skipped)}건(디자이너 작업)"
+    a2.caption(summary)
+    for r in done:
+        if r.note:
+            a2.caption(f"⚠ {r.original_ko}: {r.note}")
+    for r in result.skipped:
+        a2.caption(f"✋ {r.original_ko or r.localized}: {r.status[5:]}")
+
+
+def auto_replace_section(page, mode: str) -> None:
+    """④ 상단의 '이미지 속 한국어 문구 자동 교체' 버튼과 요약."""
+    guides = overlay.eligible(current_page(page).image_guides, set(media_by_id()))
+    if not guides:
+        return
+    c1, c2 = st.columns([3, 2])
+    label = "이미지 속 한국어 문구 자동 교체" + (" (지시서를 고쳤으면 다시 실행)" if "auto_images" in ss else "")
+    if c1.button(label, help="단색 배경 위 글자를 지우고 지시서의 현지어 문구를 같은 자리·같은 색으로 그립니다."):
+        targets = {g.image_id: [r.original_ko for r in g.text_replacements if r.original_ko] for g in guides}
+        located = run_ai("이미지에서 글자 위치를 찾고 현지어로 다시 그리는 중입니다…", pipeline.locate, ss.media, targets, mode=mode)
+        if located:
+            try:
+                ss.auto_images = overlay.overlay_all(ss.media, guides, located.boxes, page.language)
+                ss.locate_notes = located.notes
+                st.rerun()
+            except fonts.FontError as e:
+                st.error(str(e))
+    c1.caption(
+        "흰 바탕·색 띠·색 원처럼 단색 배경 위의 글자만 바꿉니다. 사진·그라데이션 위 글자와 새로 넣는 문구는 건너뛰고 "
+        "디자이너 지시서로 남깁니다. 결과는 각 지시서 카드에서 확인하고 끌 수 있으며, 직접 올린 이미지가 있으면 그것이 우선입니다."
+        + (" 실제 AI 모드에서는 글자 위치를 찾기 위해 해당 이미지를 한 번 더 보냅니다(이미지 토큰 비용)." if mode == "live" else "")
+    )
+    if "auto_images" in ss:
+        results = list(ss.auto_images.values())
+        done = sum(len(r.done) for r in results)
+        skipped = sum(len(r.skipped) for r in results)
+        c2.metric("자동 교체된 문구", f"{done}건", help=f"이미지 {sum(1 for r in results if r.jpeg)}장 · 건너뜀 {skipped}건")
+        for note in ss.get("locate_notes", []):
+            c2.caption(f"ℹ {note}")
+
+
 def guide_card(g, thumbs: dict, flags: list, auto: bool = False) -> None:
     """g 는 AI 원본 지시서. 표 편집기에는 원본을 넘기고, 변경분은 Streamlit 이 따로 기억한다."""
     ss.setdefault(f"ginst_{g.image_id}", "\n".join(g.edit_instructions))
@@ -505,6 +565,7 @@ def guide_card(g, thumbs: dict, flags: list, auto: bool = False) -> None:
                 c2.caption("🖼 교체 이미지가 미리보기와 내보내기에 들어갑니다. 원본 지시서는 참고용으로 남습니다.")
             except media.MediaError as e:
                 c2.error(str(e))
+        auto_result(g, c2, uploaded is not None)
         for f in flags:
             st.markdown(flag_line(f))
         with st.expander(f"지시서 편집 — 바꿀 문구 {len(g.text_replacements)}건 · 수정 지시 · 보존 요소"):
@@ -598,6 +659,7 @@ def step_review() -> None:
     c6.metric("AI 제안(사실 아님)", sum(i.is_ai_suggestion for i in page.items))
 
     refine_log_section()
+    auto_replace_section(page, ss.get("active_mode", "demo"))
     if original_flags:
         with st.expander(f"원본(텍스트·이미지)에서 발견된 위험 표현 ({len(original_flags)}건)"):
             for f in original_flags:
@@ -629,7 +691,7 @@ def step_review() -> None:
             facts = {f.id: f for f in ex.facts}
             items = [i for i in page.items if not only_pending
                      or needs_attention(i.id, decisions[i.id]["status"], by_item.get(i.id, []), auto_items)]
-            guides = [g for g in page.image_guides if not only_pending
+            guides = [g for g in page.image_guides if not only_pending or g.image_id in ss.get("auto_images", {})
                       or needs_attention(g.image_id, guide_decisions[g.image_id], by_item.get(g.image_id, []), auto_guides)]
             hidden = len(page.items) - len(items) + len(page.image_guides) - len(guides)
             if hidden:

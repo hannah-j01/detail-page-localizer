@@ -89,11 +89,22 @@ def to_jpeg(data: bytes) -> bytes:
     return _encode(open_image(data))
 
 
-def slice_image(img: Image.Image) -> list[Image.Image]:
+def normalize_width(img: Image.Image) -> Image.Image:
     if img.width > MAX_WIDTH:
-        img = img.resize((MAX_WIDTH, round(img.height * MAX_WIDTH / img.width)), Image.LANCZOS)
+        return img.resize((MAX_WIDTH, round(img.height * MAX_WIDTH / img.width)), Image.LANCZOS)
+    return img
+
+
+def slice_bounds(img: Image.Image) -> list[int]:
+    """폭을 맞춘 이미지에서 조각 경계(행 번호) 목록. [0, cut1, cut2, …, height]"""
+    img = normalize_width(img)
     gray = np.asarray(img.convert("L"), dtype=np.float32)
-    bounds = [0, *_cut_rows(gray), img.height]
+    return [0, *_cut_rows(gray), img.height]
+
+
+def slice_image(img: Image.Image) -> list[Image.Image]:
+    img = normalize_width(img)
+    bounds = slice_bounds(img)
     return [img.crop((0, top, img.width, bottom)) for top, bottom in zip(bounds, bounds[1:])]
 
 

@@ -1,0 +1,40 @@
+# 이미지 속 문구 자동 교체에 쓰는 글꼴.
+# 언어별로 '있으면 쓰는' 로컬 글꼴(Windows 기본 글꼴)을 먼저 찾고, 없으면 download 의 오픈소스 글꼴(Google Fonts, OFL)을
+# 사용자 홈의 캐시 폴더에 한 번 내려받아 쓴다(배포 서버는 리눅스라 Windows 글꼴이 없다).
+# weight: regular / bold 각각 후보 목록. 가변 글꼴(VF)은 regular 로 두고 굵기는 variation 으로 조절한다.
+ja:
+  regular:
+    - C:/Windows/Fonts/YuGothM.ttc
+    - C:/Windows/Fonts/meiryo.ttc
+    - C:/Windows/Fonts/msgothic.ttc
+    - /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+  bold:
+    - C:/Windows/Fonts/YuGothB.ttc
+    - C:/Windows/Fonts/meiryob.ttc
+    - /usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc
+  download:
+    file: NotoSansJP[wght].ttf
+    url: https://github.com/google/fonts/raw/main/ofl/notosansjp/NotoSansJP%5Bwght%5D.ttf
+zh:
+  regular:
+    - C:/Windows/Fonts/msyh.ttc
+    - C:/Windows/Fonts/simhei.ttf
+    - /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+  bold:
+    - C:/Windows/Fonts/msyhbd.ttc
+    - /usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc
+  download:
+    file: NotoSansSC[wght].ttf
+    url: https://github.com/google/fonts/raw/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf
+en:
+  regular:
+    - C:/Windows/Fonts/arial.ttf
+    - C:/Windows/Fonts/segoeui.ttf
+    - /usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+  bold:
+    - C:/Windows/Fonts/arialbd.ttf
+    - C:/Windows/Fonts/segoeuib.ttf
+    - /usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf
+  download:
+    file: NotoSans[wdth,wght].ttf
+    url: https://github.com/google/fonts/raw/main/ofl/notosans/NotoSans%5Bwdth%2Cwght%5D.ttf

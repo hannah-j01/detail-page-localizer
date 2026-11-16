@@ -176,6 +176,21 @@ class Revision(BaseModel):
     notes: list[str] = Field(description="무엇을 왜 고쳤는지 한국어 한 줄씩")
 
 
+# ── 이미지 속 문구 위치 찾기(자동 교체용) ─────────────────────
+class TextBox(BaseModel):
+    image_id: str = Field(description="이미지 ID 그대로. 예: I1")
+    text_ko: str = Field(description="이미지 분석의 texts_ko 에 있는 문구 원문 그대로")
+    x0: int = Field(description="글자 영역 왼쪽. 이미지 폭을 1000 으로 본 비율 좌표(0~1000)")
+    y0: int = Field(description="글자 영역 위쪽. 이미지 높이를 1000 으로 본 비율 좌표(0~1000)")
+    x1: int = Field(description="글자 영역 오른쪽(0~1000)")
+    y1: int = Field(description="글자 영역 아래쪽(0~1000)")
+
+
+class LocateResult(BaseModel):
+    boxes: list[TextBox]
+    notes: list[str] = Field(description="위치를 확신할 수 없는 문구나 찾지 못한 문구에 대한 한국어 설명. 없으면 빈 배열")
+
+
 # ── 검수 결과(내부용, AI 응답 형식 아님) ───────────────────────
 class ReviewFlag(BaseModel):
     source: Literal["AI", "규칙", "근거", "숫자"]
