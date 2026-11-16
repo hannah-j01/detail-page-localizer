@@ -14,6 +14,7 @@ from core import llm, media, pipeline, url_import
 from core.config_loader import load_all, marketplaces_for, risk_rules_for
 from core.edits import COL_BACK, COL_LOCALIZED, COL_ORIGINAL, apply_guide_edits, is_edited, table_rows, with_guides
 from core.export import INCLUDED, compute_metrics, final_texts, to_json, to_markdown
+from core.preview import render_preview
 from core.review import ORIGINAL_ITEM_ID, full_review
 from core.schemas import FIELD_LABELS, ProductInput
 
@@ -410,6 +411,37 @@ def step_strategy(mode: str) -> None:
 
 
 # ── ④ 생성 결과 검수 ─────────────────────────────────────────
+LAYOUTS = ["편집 + 미리보기", "편집만", "미리보기만"]
+PANEL_HEIGHT = 860          # 나란히 보기에서 편집 칸과 미리보기 칸의 높이(각각 따로 스크롤)
+
+
+def text_height(text: str) -> int:
+    """문구 길이에 맞춘 입력칸 높이. 원본 문구 기준이라 편집 중에 칸 크기가 흔들리지 않는다."""
+    lines = sum(max(1, len(line) // 48 + 1) for line in (text.splitlines() or [""]))
+    return min(240, max(68, 30 + 24 * lines))
+
+
+def item_card(item, facts: dict, flags: list) -> None:
+    with st.container(border=True):
+        st.markdown(f"**{item.id}** · {'🧪 AI 제안 (사실 아님)' if item.is_ai_suggestion else '📌 사실 기반'}")
+        st.text_area(f"{item.id} 현지화 문구", key=f"txt_{item.id}", height=text_height(item.localized),
+                     label_visibility="collapsed")
+        st.caption(f"역번역: {item.back_translation_ko}")
+        for f in flags:
+            st.markdown(flag_line(f))
+        st.radio("결정", ["미검토", "수락", "거절"], key=f"dec_{item.id}", horizontal=True,
+                 label_visibility="collapsed")
+        with st.expander("원본 · 수정 이유 · 근거 · 대안"):
+            st.markdown(f"**원본 (한국어)**  \n{item.original_ko or '— 새로 추가한 항목'}")
+            st.markdown(f"**수정 이유** — {item.reason}")
+            if item.fact_ids:
+                st.markdown("**근거**  \n" + "  \n".join(
+                    f"`{fid}` {facts[fid].content}" if fid in facts else f"`{fid}` ⚠ 존재하지 않는 ID" for fid in item.fact_ids
+                ))
+            if item.variants:
+                st.markdown("**테스트용 대안**  \n" + "  \n".join(f"- {v}" for v in item.variants))
+
+
 def guide_card(g, thumbs: dict, flags: list) -> None:
     """g 는 AI 원본 지시서. 표 편집기에는 원본을 넘기고, 변경분은 Streamlit 이 따로 기억한다."""
     ss.setdefault(f"ginst_{g.image_id}", "\n".join(g.edit_instructions))
@@ -421,31 +453,45 @@ def guide_card(g, thumbs: dict, flags: list) -> None:
         else:
             c1.markdown(f"**{g.image_id}**  \n🆕 새로 만들 이미지")
         order = "삭제 권장" if g.action == "삭제" else f"{g.recommended_order}번째"
-        c2.markdown(f"**{g.image_id} · {g.action}** ({order}) — {g.reason}")
+        c2.markdown(f"**{g.image_id} · {g.action}** ({order})")
+        c2.caption(g.reason)
         if is_edited(g, edited_guide(g)):
             c2.caption("✏️ 직접 수정됨 — 고친 행의 역번역은 결과 파일에 '역번역 없음'으로 표시됩니다.")
-        c2.data_editor(
-            table_rows(g), key=f"gedit_{g.image_id}", num_rows="dynamic", hide_index=True, width="stretch",
-            column_config={
-                COL_ORIGINAL: st.column_config.TextColumn(COL_ORIGINAL, help="AI가 이미지 글자를 잘못 읽었다면 고치세요. 새 문구면 빈 칸"),
-                COL_LOCALIZED: st.column_config.TextColumn(COL_LOCALIZED, help="빈 칸이면 이미지에서 이 문구를 지운다는 뜻"),
-                COL_BACK: st.column_config.TextColumn(COL_BACK, disabled=True),
-            },
-        )
-        c2.caption("칸을 눌러 바로 고칠 수 있습니다. '바꿀 문구'가 빈 칸이면 삭제, 표 맨 아래 빈 행에서 새 문구를 추가합니다.")
-        left, right = c2.columns(2)
-        left.text_area("수정 지시 (한 줄에 하나)", key=f"ginst_{g.image_id}", height=140)
-        right.text_area("🔒 바꾸면 안 되는 요소 (한 줄에 하나)", key=f"gkeep_{g.image_id}", height=140)
+        c2.radio("결정", ["미검토", "수락", "거절"], key=f"gdec_{g.image_id}", horizontal=True,
+                 label_visibility="collapsed")
         for f in flags:
             st.markdown(flag_line(f))
-        st.radio("결정", ["미검토", "수락", "거절"], key=f"gdec_{g.image_id}", horizontal=True,
-                 label_visibility="collapsed")
+        with st.expander(f"지시서 편집 — 바꿀 문구 {len(g.text_replacements)}건 · 수정 지시 · 보존 요소"):
+            st.data_editor(
+                table_rows(g), key=f"gedit_{g.image_id}", num_rows="dynamic", hide_index=True, width="stretch",
+                column_config={
+                    COL_ORIGINAL: st.column_config.TextColumn(COL_ORIGINAL, help="AI가 이미지 글자를 잘못 읽었다면 고치세요. 새 문구면 빈 칸"),
+                    COL_LOCALIZED: st.column_config.TextColumn(COL_LOCALIZED, help="빈 칸이면 이미지에서 이 문구를 지운다는 뜻"),
+                    COL_BACK: st.column_config.TextColumn(COL_BACK, disabled=True),
+                },
+            )
+            st.caption("칸을 눌러 바로 고칠 수 있습니다. '바꿀 문구'가 빈 칸이면 삭제, 표 맨 아래 빈 행에서 새 문구를 추가합니다.")
+            left, right = st.columns(2)
+            left.text_area("수정 지시 (한 줄에 하나)", key=f"ginst_{g.image_id}", height=140)
+            right.text_area("🔒 바꾸면 안 되는 요소 (한 줄에 하나)", key=f"gkeep_{g.image_id}", height=140)
+
+
+def preview_panel(page, product, decisions: dict, guide_decisions: dict) -> None:
+    st.caption(
+        "현지 고객이 보게 될 모양입니다. 거절한 항목은 빠지고, 점선 테두리는 미검토, 초록 테두리는 직접 수정한 항목입니다. "
+        "이미지는 아직 원본이며, 그 아래 표가 이미지에서 바꿀 문구입니다."
+    )
+    st.html(render_preview(product, page, decisions, guide_decisions,
+                           {m.id: m.jpeg for m in ss.get("media", [])}, include_unreviewed=True))
 
 
 def step_review() -> None:
     page, product, ex = ss.page, ss.product, ss.extraction
     st.header(STEPS[3])
-    st.caption("문구와 이미지 지시서마다 수락·거절을 고르세요. 직접 고친 뒤 수락하면 '직접 수정'으로 기록되고, 위험 표현·숫자 검사도 고친 내용으로 다시 실행됩니다.")
+    st.caption(
+        "문구를 고치거나 수락·거절을 고르면 미리보기에 바로 반영됩니다. "
+        "직접 고친 뒤 수락하면 '직접 수정'으로 기록되고, 위험 표현·숫자 검사도 고친 내용으로 다시 실행됩니다."
+    )
 
     for item in page.items:      # 위젯 기본값을 먼저 넣어 둔다
         ss.setdefault(f"txt_{item.id}", item.localized)
@@ -453,68 +499,68 @@ def step_review() -> None:
     for g in page.image_guides:
         ss.setdefault(f"gdec_{g.image_id}", "미검토")
 
+    decisions, guide_decisions = collect_decisions(page), collect_guide_decisions(page)
+    edited_page = current_page(page)
     rules = risk_rules_for(product.country, product.category)
-    flags = full_review(current_page(page), ex, rules, product, final_texts(page, collect_decisions(page)))
+    flags = full_review(edited_page, ex, rules, product, final_texts(page, decisions))
     by_item: dict[str, list] = {}
     for f in flags:
         by_item.setdefault(f.item_id, []).append(f)
     original_flags = [f for f in flags if f.item_id.startswith(ORIGINAL_ITEM_ID)]
 
+    statuses = [d["status"] for d in decisions.values()] + list(guide_decisions.values())
     c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("생성된 문구", len(page.items))
-    c2.metric("이미지 지시서", len(page.image_guides))
+    c1.metric("문구 · 이미지 지시서", f"{len(page.items)} · {len(page.image_guides)}")
+    c2.metric("미검토", statuses.count("미검토"))
     c3.metric("결과물 위험 표시", len(flags) - len(original_flags))
     c4.metric("원본의 위험 표현", len(original_flags))
     c5.metric("AI 제안(사실 아님)", sum(i.is_ai_suggestion for i in page.items))
 
     if original_flags:
-        with st.expander(f"원본(텍스트·이미지)에서 발견된 위험 표현 ({len(original_flags)}건)", expanded=True):
+        with st.expander(f"원본(텍스트·이미지)에서 발견된 위험 표현 ({len(original_flags)}건)"):
             for f in original_flags:
                 st.markdown(f"**{f.item_id}** · " + flag_line(f))
     if page.missing_info:
         with st.expander(f"사용하지 않은 주장과 빠진 정보 ({len(page.missing_info)}건)"):
             st.markdown("\n".join(f"- {m}" for m in page.missing_info))
 
-    if st.button("검토하지 않은 항목 모두 수락"):
+    left, right = st.columns([3, 2])
+    layout = left.segmented_control("보기 방식", LAYOUTS, default=LAYOUTS[0], key="review_layout") or LAYOUTS[0]
+    if right.button("검토하지 않은 항목 모두 수락"):
         for key in [k for k in ss.keys() if k.startswith(("dec_", "gdec_"))]:
             if ss[key] == "미검토":
                 ss[key] = "수락"
         st.rerun()
 
-    facts = {f.id: f for f in ex.facts}
-    section = None
-    for item in page.items:
-        if item.section != section:
-            section = item.section
-            st.subheader(section)
-        with st.container(border=True):
-            c1, c2, c3 = st.columns([1, 1.4, 1])
-            c1.caption("원본 (한국어)")
-            c1.write(item.original_ko or "— 새로 추가한 항목")
-            c2.text_area(f"{item.id} 현지화 문구", key=f"txt_{item.id}", height=110)
-            c2.caption(f"역번역: {item.back_translation_ko}")
-            if item.variants:
-                c2.caption("테스트용 대안: " + " / ".join(item.variants))
-            c3.markdown("🧪 **AI 제안**" if item.is_ai_suggestion else "📌 **사실 기반**")
-            c3.markdown(f"**수정 이유** — {item.reason}")
-            if item.fact_ids:
-                c3.caption("근거: " + " · ".join(
-                    f"{fid} {facts[fid].content}" if fid in facts else f"{fid}(없는 ID)" for fid in item.fact_ids
-                ))
-            for f in by_item.get(item.id, []):
-                st.markdown(flag_line(f))
-            st.radio("결정", ["미검토", "수락", "거절"], key=f"dec_{item.id}", horizontal=True,
-                     label_visibility="collapsed")
+    if layout == LAYOUTS[0]:
+        edit_col, prev_col = st.columns([1.1, 0.9], gap="medium")
+        edit_box, prev_box = edit_col.container(height=PANEL_HEIGHT), prev_col.container(height=PANEL_HEIGHT)
+    elif layout == LAYOUTS[1]:
+        edit_box, prev_box = st.container(), None
+    else:
+        edit_box, prev_box = None, st.container()
 
-    if page.image_guides:
-        st.subheader("이미지 수정 지시서")
-        st.caption(
-            "디자이너나 이미지 편집 도구에 넘길 지시서입니다. 추천 순서대로 정렬했습니다. "
-            "'바꾸면 안 되는 요소'는 이미지 편집 중 제품 외형·인증 표시·수치가 왜곡되지 않았는지 확인하는 목록입니다."
-        )
-        thumbs = media_by_id()
-        for g in sorted(page.image_guides, key=lambda g: (g.recommended_order == 0, g.recommended_order)):
-            guide_card(g, thumbs, by_item.get(g.image_id, []))
+    if edit_box is not None:
+        with edit_box:
+            facts = {f.id: f for f in ex.facts}
+            section = None
+            for item in page.items:
+                if item.section != section:
+                    section = item.section
+                    st.subheader(section)
+                item_card(item, facts, by_item.get(item.id, []))
+            if page.image_guides:
+                st.subheader("이미지 수정 지시서")
+                st.caption(
+                    "디자이너나 이미지 편집 도구에 넘길 지시서입니다. 추천 순서대로 정렬했습니다. "
+                    "'바꾸면 안 되는 요소'는 이미지 편집 중 제품 외형·인증 표시·수치가 왜곡되지 않았는지 확인하는 목록입니다."
+                )
+                thumbs = media_by_id()
+                for g in sorted(page.image_guides, key=lambda g: (g.recommended_order == 0, g.recommended_order)):
+                    guide_card(g, thumbs, by_item.get(g.image_id, []))
+    if prev_box is not None:
+        with prev_box:
+            preview_panel(edited_page, product, decisions, guide_decisions)
 
 
 # ── ⑤ 내보내기 ──────────────────────────────────────────────
@@ -545,8 +591,12 @@ def step_export() -> None:
     c1, c2 = st.columns(2)
     c1.download_button("Markdown 파일 다운로드", md, f"{stem}_{page.language}.md", "text/markdown", type="primary")
     c2.download_button("JSON 파일 다운로드", js, f"{stem}_{page.language}.json", "application/json")
-    st.caption("아래 상자 오른쪽 위의 복사 버튼으로 전체 내용을 복사할 수 있습니다. 업로드한 이미지 파일 자체는 저장하지 않습니다.")
-    st.code(md, language="markdown")
+    st.caption("업로드한 이미지 파일 자체는 저장하지 않습니다.")
+    with st.expander("최종 미리보기 (수락·직접 수정한 항목만)", expanded=True):
+        st.html(render_preview(product, page, decisions, guide_decisions,
+                               {m.id: m.jpeg for m in ss.get("media", [])}, include_unreviewed=False))
+    with st.expander("Markdown 원문 (오른쪽 위 복사 버튼으로 전체 복사)"):
+        st.code(md, language="markdown")
 
     st.subheader("작업 지표")
     st.dataframe([{"지표": k, "값": v} for k, v in metrics.items()], hide_index=True)
