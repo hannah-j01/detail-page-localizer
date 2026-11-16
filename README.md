@@ -125,15 +125,22 @@ tests/               자동 테스트
 
 ## 포트폴리오 배포 (Streamlit Community Cloud, 무료)
 
+배포 주소: https://detail-page-localizer.streamlit.app/
+
 1. GitHub 에 저장소를 만들고 이 폴더를 올립니다(`.env` 는 자동으로 제외됨).
 2. https://share.streamlit.io 에서 GitHub 로 로그인 → New app → 저장소와 `app.py` 선택 → Deploy.
-3. **API 키를 넣지 않으면 데모 모드로만 동작해 비용이 0원**입니다. 포트폴리오 공개용으로 권장합니다.
-4. 면접 등에서 실제 AI 를 시연하려면 앱 설정의 Secrets 에 아래처럼 넣습니다.
+3. 앱 오른쪽 아래 **Manage app → Settings → Sharing** 에서 공개 범위를 **Public(누구나 볼 수 있음)** 으로 바꿉니다.
+   기본값이 비공개(Streamlit 로그인 필요)여서, 바꾸지 않으면 링크를 받은 사람이 로그인 화면만 보게 됩니다.
+   확인 방법: 로그아웃한 브라우저(시크릿 창)에서 주소를 열어 로그인 없이 화면이 뜨는지 봅니다.
+4. **API 키를 넣지 않으면 데모 모드로만 동작해 비용이 0원**입니다. 포트폴리오 공개용으로 권장합니다.
+5. 면접 등에서 실제 AI 를 시연하려면 앱 설정의 Secrets 에 아래처럼 넣습니다. 저장하면 앱이 자동으로 다시 시작됩니다.
    ```toml
    ANTHROPIC_API_KEY = "..."
    APP_PASSWORD = "..."
    LIVE_CALL_LIMIT = "6"
+   CLAUDE_MODEL = "claude-sonnet-5-5"   # 생략하면 claude-opus-5-5
    ```
+6. 이 저장소의 `main` 에 push 하면 배포된 앱도 자동으로 갱신됩니다.
 
 ## 한계와 다음 단계
 

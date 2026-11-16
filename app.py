@@ -130,6 +130,7 @@ def sidebar() -> str:
     st.sidebar.caption("한국 상품 정보와 기존 상세페이지(이미지·PDF·URL)를 해외 쇼핑몰용 상세페이지 초안으로 바꾸고, 근거와 위험 표현을 함께 검수합니다.")
 
     mode = "demo"
+    get_secret("CLAUDE_MODEL")   # Streamlit secrets 에 적은 모델명을 환경 변수로 옮겨 llm.current_model() 이 읽게 한다
     if get_secret("ANTHROPIC_API_KEY"):
         choice = st.sidebar.radio("실행 모드", ["데모 (저장된 결과)", "실제 AI 호출"])
         if choice == "실제 AI 호출":
